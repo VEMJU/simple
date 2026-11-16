@@ -11,8 +11,6 @@
     try { saved = localStorage.getItem('theme'); } catch (e) {}
     var system = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     document.documentElement.dataset.theme = saved === 'dark' || saved === 'light' ? saved : system;
-    // "on" = play the how-to animations even when the device asks for reduced motion
-    try { if (localStorage.getItem('motion') === 'on') document.documentElement.dataset.motion = 'on'; } catch (e) {}
   })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -82,20 +80,6 @@
 </nav>
 
 <script src="js/plan-data.js"></script>
-<script src="js/scenes.js"></script>
-<script src="js/scenes/shampoo.js"></script>
-<script src="js/scenes/rinse.js"></script>
-<script src="js/scenes/condition.js"></script>
-<script src="js/scenes/blot.js"></script>
-<script src="js/scenes/cream.js"></script>
-<script src="js/scenes/scrunch.js"></script>
-<script src="js/scenes/fringe.js"></script>
-<script src="js/scenes/sides.js"></script>
-<script src="js/scenes/dry.js"></script>
-<script src="js/scenes/cast.js"></script>
-<script src="js/scenes/refresh.js"></script>
-<script src="js/scenes/sleep.js"></script>
-<script src="js/scenes/amounts.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

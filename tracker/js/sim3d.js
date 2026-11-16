@@ -32,8 +32,15 @@ stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const key = new THREE.DirectionalLight(0xfff1e0, 1.6);
 key.position.set(0.6, 1, 0.8);
+key.castShadow = true;   // hands and hair shade what they touch
+key.shadow.mapSize.set(1024, 1024);
+Object.assign(key.shadow.camera, { left: -0.45, right: 0.45, top: 0.45, bottom: -0.45, near: 0.1, far: 3 });
+key.shadow.bias = -0.0006;
+key.shadow.normalBias = 0.004;
 scene.add(key);
 
 const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 10);
@@ -105,7 +112,7 @@ const elOf = p => Math.asin(Math.max(-1, Math.min(1, p.y / (p.length() || 1)))) 
 /* ---------- 3 hair ---------- */
 const ZONES = ['fringe', 'top', 'back', 'sideL', 'sideR'];
 const hairMat = {}, clumps = [];
-const HAIR_DRY = new THREE.Color(0x4a3224), HAIR_WET = new THREE.Color(0x1c130e);
+const HAIR_DRY = new THREE.Color(0x4a3224), HAIR_WET = new THREE.Color(0x261a13);
 
 function zoneOf(az, el) {
   const a = Math.abs(az);
@@ -133,7 +140,7 @@ function fibreTexture() {
 
 function buildHair(group) {
   const fibres = fibreTexture();
-  ZONES.forEach(z => { hairMat[z] = new THREE.MeshPhysicalMaterial({ map: fibres, bumpMap: fibres, bumpScale: 1, color: HAIR_DRY.clone(), roughness: 0.55, clearcoat: 0.2, clearcoatRoughness: 0.5, emissive: CORAL, emissiveIntensity: 0 }); });
+  ZONES.forEach(z => { hairMat[z] = new THREE.MeshPhysicalMaterial({ map: fibres, bumpMap: fibres, bumpScale: 0.6, color: HAIR_DRY.clone(), roughness: 0.55, clearcoat: 0.2, clearcoatRoughness: 0.5, emissive: CORAL, emissiveIntensity: 0 }); });
   const STYLE = {
     // loose, soft waves (a cold perm), not tight ringlets
     fringe: { len: 0.074, r: 0.0075, turns: 1.25, droop: 1.0, out: 0.3, flow: new V3(0, -0.3, 1) },
@@ -154,11 +161,11 @@ function buildHair(group) {
       slope.set(0, -1, 0).addScaledVector(N, N.y);   // downhill along the scalp
       if (slope.lengthSq() > 0.01) slope.normalize();
       const strands = [];
-      // one lock = three thin strands that wave together
+      // one lock = five thin strands that wave together
       const dir0 = N.clone().multiplyScalar(st.out).add(st.flow).addScaledVector(slope, st.slope || 0).add(new V3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(0.5)).normalize();
       const len0 = st.len * (0.8 + rnd() * 0.4), phase0 = rnd() * 6.283, turns = st.turns * (0.8 + rnd() * 0.4);
-      for (let k = 0; k < 3; k++) {
-        const len = len0 * (0.9 + rnd() * 0.2), phase = phase0 + (k - 1) * 0.55, side = (k - 1) * 0.0042;
+      for (let k = 0; k < 5; k++) {
+        const len = len0 * (0.86 + rnd() * 0.28), phase = phase0 + (k - 2) * 0.4, side = (k - 2) * 0.003;
         const pts = [], q = P.clone(), dir = new V3(), U = new V3(), W = new V3();
         const n = 22;
         for (let i = 0; i <= n; i++) {
@@ -173,9 +180,10 @@ function buildHair(group) {
           // a wide wave one way, a shallow one the other: an open S, not a spring
           pts.push(q.clone().addScaledVector(U, r * Math.cos(ang) + side).addScaledVector(W, r * 0.45 * Math.sin(ang)).sub(P));
         }
-        strands.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 20, 0.0037, 5, false));
+        strands.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 20, 0.0026, 4, false));
       }
       const mesh = new THREE.Mesh(mergeGeometries(strands), hairMat[zone]);
+      mesh.castShadow = mesh.receiveShadow = true;
       mesh.position.copy(P);
       group.add(mesh);
       strands.forEach(g => g.dispose());
@@ -198,6 +206,7 @@ function paintScalp(mesh) {
 
 /* ---------- 4 hands ---------- */
 const FINGERS = ['index', 'middle', 'ring', 'pinky'];
+const SHOULDER = new V3(0.185, -0.235, -0.02), UPPER_ARM = 0.29, FOREARM = 0.26;
 const skinMat = new THREE.MeshStandardMaterial({ color: 0xd7a787, roughness: 0.62 });
 const cuffMat = new THREE.MeshStandardMaterial({ color: 0x2c3138, roughness: 0.9 });
 const blobMat = new THREE.MeshPhysicalMaterial({ color: 0xf6f3ee, roughness: 0.25, clearcoat: 0.6 });
@@ -208,7 +217,7 @@ function makeHand(gltf, isLeft) {
   const bones = {};
   root.traverse(o => {
     if (o.isBone) bones[o.name] = o;
-    if (o.isSkinnedMesh) { o.frustumCulled = false; o.material = skinMat; }
+    if (o.isSkinnedMesh) { o.frustumCulled = false; o.material = skinMat; o.castShadow = o.receiveShadow = true; }
   });
   const parentWorld = bones.wrist.parent.matrixWorld.clone();
   const rest = {};
@@ -277,17 +286,21 @@ function makeHand(gltf, isLeft) {
     tips.multiplyScalar(1 / 3).applyMatrix4(boneToRig);
   }
 
-  // A sleeve cuff closes the wrist, so the hand reads as part of an arm.
-  const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.027, 0.03, 0.05, 24), cuffMat);
-  cuff.scale.set(1.18, 1, 0.82);
-  cuff.position.copy(lp('wrist').applyMatrix4(boneToRig)).add(new V3(0, -0.028, 0));
-  rig.add(cuff);
+  // An arm from the shoulder, so the hand does not float. Its pieces are unit-long and get stretched into place.
+  const wrist = lp('wrist').applyMatrix4(boneToRig).add(new V3(0, -0.012, 0));
+  const arm = new THREE.Group();
+  const part = geo => { const m = new THREE.Mesh(geo, skinMat); m.castShadow = m.receiveShadow = true; arm.add(m); return m; };
+  const upper = part(new THREE.CylinderGeometry(0.04, 0.05, 1, 18));
+  const fore = part(new THREE.CylinderGeometry(0.027, 0.04, 1, 18));
+  const elbowBall = part(new THREE.SphereGeometry(0.04, 18, 12));
+  const wristBall = part(new THREE.SphereGeometry(0.0275, 16, 10));
+  part(new THREE.SphereGeometry(0.046, 18, 12)).position.set(isLeft ? SHOULDER.x : -SHOULDER.x, SHOULDER.y, SHOULDER.z);
 
   const blob = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), blobMat);
   blob.visible = false;
   rig.add(blob);
 
-  return { rig, blob, setPose, tips, isLeft, grip: 0 };
+  return { rig, blob, arm, upper, fore, elbowBall, wristBall, wrist, setPose, tips, isLeft, grip: 0 };
 }
 
 const zAxis = new V3(), yAxis = new V3(), xAxis = new V3(), basis = new M4(), qTurn = new Q(), tmpP = new V3(), tmpN = new V3(), target = new V3();
@@ -315,6 +328,35 @@ function placeHand(hand, s) {
   hand.rig.quaternion.setFromRotationMatrix(basis.makeBasis(xAxis, yAxis, zAxis)).multiply(qTurn.setFromAxisAngle(X1, s.pitch)).multiply(qTurn.setFromAxisAngle(Y1, side * s.roll));
   hand.rig.position.copy(target);
   if (s.contact > 0) hand.rig.position.sub(tmpP.copy(hand.tips).multiplyScalar(s.contact).applyQuaternion(hand.rig.quaternion));
+  placeArm(hand, side);
+}
+
+const sh = new V3(), wr = new V3(), el = new V3(), along = new V3(), pole = new V3();
+function stretch(mesh, a, b) {   // lay a unit-long piece from a to b
+  along.subVectors(b, a);
+  const len = along.length();
+  mesh.position.copy(a).addScaledVector(along, 0.5);
+  mesh.quaternion.setFromUnitVectors(UP, along.divideScalar(len || 1));
+  mesh.scale.set(1, len, 1);
+}
+/** Bend the arm so it reaches the wrist: the elbow goes out to the side, a little down and back. */
+function placeArm(hand, side) {
+  hand.arm.visible = hand.rig.visible;
+  if (!hand.arm.visible) return;
+  sh.set(side * SHOULDER.x, SHOULDER.y, SHOULDER.z);
+  wr.copy(hand.wrist).applyQuaternion(hand.rig.quaternion).add(hand.rig.position);
+  along.subVectors(wr, sh);
+  const d = Math.min(along.length(), UPPER_ARM + FOREARM - 0.002);
+  along.normalize();
+  const a = (UPPER_ARM * UPPER_ARM - FOREARM * FOREARM + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, UPPER_ARM * UPPER_ARM - a * a));
+  pole.set(side, -0.35, -0.45);
+  pole.addScaledVector(along, -pole.dot(along)).normalize();
+  el.copy(sh).addScaledVector(along, a).addScaledVector(pole, h);
+  hand.elbowBall.position.copy(el);
+  hand.wristBall.position.copy(wr);
+  stretch(hand.upper, sh, el);
+  stretch(hand.fore, el, wr);
 }
 
 /* ---------- 5 arrows ---------- */
@@ -357,7 +399,7 @@ function moveShower(t) {
 }
 
 const spray = new THREE.Group();
-const NOZZLE = new V3(-0.24, 0.13, 0.2);
+const NOZZLE = new V3(-0.17, 0.15, 0.2);
 {
   const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.024, 0.11, 20), new THREE.MeshPhysicalMaterial({ color: 0xdfeaf2, roughness: 0.2, transparent: true, opacity: 0.75 }));
   bottle.position.copy(NOZZLE).add(new V3(-0.012, -0.085, 0.01));
@@ -378,6 +420,26 @@ function moveSpray(t) {
     a.setXYZ(i, lerp(NOZZLE.x, aim.x + m.dx, u), lerp(NOZZLE.y, aim.y + m.dy, u), lerp(NOZZLE.z, aim.z + m.dz, u));
   });
   a.needsUpdate = true;
+}
+
+const dripMat = new THREE.MeshPhysicalMaterial({ color: WATER, roughness: 0.1, transparent: true, opacity: 0.8 });
+const drips = Array.from({ length: 28 }, () => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.0035, 8, 6), dripMat); m.visible = false; m.userData.v = 0; return m; });
+let nextDrip = 0;
+function moveDrips(dt, wet) {
+  hands.forEach(h => {
+    if (wet >= 0.9 && h.rig.visible && h.grip > 0.7 && Math.random() < dt * 14) {
+      const d = drips[nextDrip++ % drips.length];
+      d.position.copy(h.rig.position).add(tmpP.set((Math.random() - 0.5) * 0.05, -0.02, (Math.random() - 0.5) * 0.05));
+      d.userData.v = 0; d.visible = true;
+    }
+  });
+  drips.forEach(d => {
+    if (!d.visible) return;
+    d.userData.v -= 4 * dt;
+    d.position.y += d.userData.v * dt;
+    d.scale.set(1, 1 + Math.min(2, -d.userData.v * 2), 1);   // a falling drop stretches
+    if (d.position.y < -0.4) d.visible = false;
+  });
 }
 
 /* ---------- 6 player ---------- */
@@ -456,8 +518,8 @@ function showScene(i) {
   const wet = sc.wet ?? 0, shine = Math.max(wet, sc.cast ?? 0);
   ZONES.forEach(z => {
     hairMat[z].color.copy(HAIR_DRY).lerp(HAIR_WET, wet);
-    hairMat[z].roughness = lerp(0.55, 0.3, shine);
-    hairMat[z].clearcoat = lerp(0.2, 0.55, shine);
+    hairMat[z].roughness = lerp(0.55, 0.44, shine);
+    hairMat[z].clearcoat = lerp(0.2, 0.3, shine);
   });
   hands.forEach((h, i) => {
     const b = sc.blob && sc.blob.hand === i ? sc.blob : null;
@@ -495,8 +557,11 @@ function advance(dt) {
 }
 
 const clock = new THREE.Clock();
+const flags = { glow: true };   // the zone glow can be switched off for recording
+let forcedDt = null, now = 0;   // forcedDt: a recorder sets the time step itself
 function frame() {
-  const dt = Math.min(clock.getDelta(), 0.25);   // a slow device skips ahead instead of running in slow motion
+  const dt = forcedDt ?? Math.min(clock.getDelta(), 0.25);   // a slow device skips ahead instead of running in slow motion
+  now += dt;
   if (camGoal) {
     camera.position.lerp(camGoal, 1 - Math.pow(0.002, dt));
     if (camera.position.distanceTo(camGoal) < 0.004) camGoal = null;
@@ -508,15 +573,16 @@ function frame() {
     placeHand(hands[1], sample(current.R, time));
 
     hands.forEach(h => { const b = h.blob.userData; h.blob.visible = b.r > 0 && time >= (b.from ?? 0) && time < (b.to ?? sc.dur); });
-    if (shower.visible) moveShower(clock.elapsedTime);
-    if (spray.visible) moveSpray(clock.elapsedTime);
+    if (shower.visible) moveShower(now);
+    if (spray.visible) moveSpray(now);
+    moveDrips(dt, sc.wet ?? 0);
 
     const part = sc.parts.findIndex(p => time >= p.from && time < p.to);
     if (part !== lastPart && part >= 0) { lastPart = part; $('simText').textContent = sc.parts[part].text; }
 
     // hair: zones glow while they are being worked, and curls squash in a closing hand
-    const pulse = 0.5 + 0.5 * Math.sin(clock.elapsedTime * 4);
-    ZONES.forEach(z => { hairMat[z].emissiveIntensity = (sc.glow || []).includes(z) ? 0.03 + 0.03 * pulse : 0; });
+    const pulse = 0.5 + 0.5 * Math.sin(now * 4);
+    ZONES.forEach(z => { hairMat[z].emissiveIntensity = flags.glow && (sc.glow || []).includes(z) ? 0.03 + 0.03 * pulse : 0; });
     const vol = sc.volume ?? 1;
     clumps.forEach(c => {
       let squash = 0;
@@ -544,6 +610,7 @@ try {
   const S = 0.05;
   headMesh.scale.setScalar(S);
   headMesh.position.set(0.07 * S, -2.2 * S, -0.05 * S);
+  headMesh.castShadow = headMesh.receiveShadow = true;
   scene.add(headMesh);
   headMesh.updateMatrixWorld(true);
   buildScalp(headMesh);
@@ -551,10 +618,10 @@ try {
 
   const hair = new THREE.Group();
   buildHair(hair);
-  scene.add(hair, arrowGroup, shower, spray);
+  scene.add(hair, arrowGroup, shower, spray, ...drips);
 
   hands = [makeHand(leftGltf, true), makeHand(rightGltf, false)];
-  hands.forEach(h => scene.add(h.rig));
+  hands.forEach(h => scene.add(h.rig, h.arm));
 
   $('simLoad').remove();
   $('simSteps').innerHTML = SCENES.map((s, i) =>
@@ -599,11 +666,13 @@ try {
   document.addEventListener('visibilitychange', run);
   run();
 
-  // for testing: snap(i, t) draws step i at second t and returns the canvas
+  // for testing and for tools/record-videos.js: snap(i, t) draws step i at second t and returns the canvas
   window.SIM = {
-    scenes: SCENES, hands, clumps, showScene,
+    scenes: SCENES, details: DETAILS, hands, clumps, showScene,
     snap(i, t) { showScene(i); playing = false; time = t; if (camGoal) { camera.position.copy(camGoal); camGoal = null; } frame(); return renderer.domElement; },
     run(seconds) { for (let k = 0; k < seconds * 20; k++) advance(0.05); frame(); },
+    renderer, camera, controls, arrowGroup, flags,
+    seek(t, dt = 0) { playing = false; camGoal = null; time = t; forcedDt = dt; frame(); forcedDt = null; },
   };
 } catch (err) {
   console.error(err);

@@ -71,14 +71,17 @@
       </div>`;
   }
 
-  /** The picture for a step: your own image if one is listed in HAIR.images, else the animation. */
-  function mediaHtml(sceneId) {
-    const scene = SCENES[sceneId];
-    const image = HAIR.images[sceneId];
-    const caption = scene ? scene.caption : '';
-    const inner = image ? `<img src="${esc(image)}" alt="${esc(caption)}" loading="lazy">` : SceneKit.render(sceneId);
-    if (!inner) return '';
-    return `<div class="step-media"><div class="stage">${inner}</div>${caption ? `<p class="stage-cap">${esc(caption)}</p>` : ''}</div>`;
+  /** A step's video, recorded from the 3D guide. It loads only when played.
+      Its own play button and slider sit clear of the captions in the picture. */
+  function mediaHtml(step) {
+    if (!step.clip) return '';
+    return `<div class="step-media">
+      <div class="stage">
+        <video src="${esc(step.clip)}" poster="${esc(step.clip.replace(/\.mp4$/, '.jpg'))}" muted loop playsinline preload="none"></video>
+        <button class="clip-play" type="button" aria-label="Play or pause the video for ${esc(step.title)}"></button>
+      </div>
+      <input class="clip-seek" type="range" min="0" max="1000" value="0" aria-label="Position in the video">
+    </div>`;
   }
 
   const YT_ID = /^[\w-]{11}$/;
@@ -99,7 +102,7 @@
   }
 
   function stepHtml(step, i, numbered) {
-    const media = step.scene ? mediaHtml(step.scene) : '';
+    const media = mediaHtml(step);
     return `
       <article class="step glass reveal${media ? '' : ' no-media'}" id="step-${esc(step.id)}" style="--n:${Math.min(i, 6)}">
         ${media}
@@ -162,33 +165,34 @@
       if (chip) document.getElementById(chip.dataset.jump)?.scrollIntoView({ block: 'start' });
     });
 
-    // Animations run only while their stage is on screen. If the device asks for
-    // reduced motion they stay still, unless the user switches them on here.
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const still = reduced && document.documentElement.dataset.motion !== 'on';
-    if (still) {
-      $('.hero', view).insertAdjacentHTML('beforeend',
-        '<p class="motion-note">Animations are paused because this device has reduced motion on. <button class="btn small" type="button" id="motionOn">Play them</button></p>');
-      $('#motionOn').addEventListener('click', () => {
-        try { localStorage.setItem('motion', 'on'); } catch (e) { /* lasts for this visit only */ }
-        document.documentElement.dataset.motion = 'on';
-        $('.motion-note', view).remove();
-        startStages();
-      });
-    } else startStages();
-  }
+    // Videos: tap the picture to play or pause, drag the slider to move through it.
+    const clipOf = el => el.closest('.step-media')?.querySelector('video');
+    view.addEventListener('click', e => {
+      const v = e.target.closest('.stage') && clipOf(e.target);
+      if (v) { if (v.paused) v.play(); else v.pause(); }
+    });
+    ['play', 'pause'].forEach(type => view.addEventListener(type, e => {
+      e.target.closest('.stage')?.classList.toggle('is-playing', type === 'play');
+    }, true));   // media events do not bubble, so listen on the way down
+    view.addEventListener('timeupdate', e => {
+      const seek = e.target.closest('.step-media')?.querySelector('.clip-seek');
+      if (seek && e.target.duration) seek.value = e.target.currentTime / e.target.duration * 1000;
+    }, true);
+    view.addEventListener('input', e => {
+      const v = e.target.matches('.clip-seek') && clipOf(e.target);
+      if (v && v.duration) v.currentTime = e.target.value / 1000 * v.duration;
+    });
 
-  function startStages() {
-    const view = $('#view-plan');
+    // A video that scrolls out of view stops playing.
     if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver(entries => {
-        entries.forEach(en => en.target.classList.toggle('is-playing', en.isIntersecting));
-      }, { threshold: .5 });
-      $$('.stage', view).forEach(stage => io.observe(stage));
+        entries.forEach(en => { if (!en.isIntersecting) en.target.pause(); });
+      }, { threshold: .2 });
+      $$('video', view).forEach(v => io.observe(v));
     }
   }
 
-  // Videos play in place when the app is served from a web address. Opened as a
+  // YouTube videos play in place when the app is served from a web address. Opened as a
   // local file, YouTube refuses to embed, so the link opens YouTube instead.
   document.addEventListener('click', e => {
     const link = e.target.closest('a.yt');
@@ -378,7 +382,6 @@
   }
 
   /* ---------- 7 start ---------- */
-  SceneKit.mountDefs();
   renderPlan();
   renderWatch();
   initTracker();

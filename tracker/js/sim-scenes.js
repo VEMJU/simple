@@ -23,6 +23,7 @@
  */
 export const POSES = {
   flat:    { f: [0.05, 0.05, 0.05], th: [0, 0, 0] },
+  glide:   { f: [0.3, 0.32, 0.2],    th: [0.1, 0.1, 0.1] },   // a flat hand that follows the curve of the head
   claw:    { f: [0.4, 0.8, 0.5],    th: [0.2, 0.2, 0.3] },
   rake:    { f: [0.25, 0.6, 0.4],   th: [0.1, 0.2, 0.2] },
   cup:     { f: [0.4, 0.5, 0.35],   th: [0.15, 0.2, 0.2] },
@@ -75,7 +76,7 @@ const amount = (id, group, title, r, sizeText, rubText) => ({
 });
 
 const sidesDown = [
-  { t: 0, az: 88, el: 44, lift: 0.08, yaw: 50, contact: 0, pitch: 0, pose: 'flat' },
+  { t: 0, az: 88, el: 44, lift: 0.08, yaw: 50, contact: 0, pitch: 0, pose: 'glide' },
   { t: 0.5, lift: 0.022 },
   { t: 2.0, el: 2 },
   { t: 2.4, lift: 0.08 },
@@ -267,7 +268,7 @@ export const SCENES = [
       { from: 2.6, to: 5.6, text: 'Carry on down the back. Stay on the surface. Do not dig your fingers in.' },
     ],
     both: [
-      { t: 0, az: 28, el: 56, lift: 0.12, contact: 0, pitch: 0, pose: 'flat' },
+      { t: 0, az: 28, el: 56, lift: 0.12, contact: 0, pitch: 0, pose: 'glide' },
       { t: 0.6, lift: 0.05 },
       { t: 2.6, az: 150, el: 45 },
       { t: 4, az: 160, el: -15, lift: 0.055 },

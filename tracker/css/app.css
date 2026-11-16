@@ -2,7 +2,7 @@
    Simple: hair plan + tracker
    1 tokens   2 base      3 backdrop   4 glass
    5 chrome   6 plan      7 media      8 watch list
-   9 tracker  10 scenes   11 motion
+   9 tracker  10 motion
    ========================================================= */
 
 /* ---------- 1 tokens ---------- */
@@ -302,16 +302,23 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 0 14px 130px; }
 .sources { margin-top: 14px; padding: 0 8px; font-size: 13px; color: var(--ink-3); }
 .sources a { color: var(--ink-2); }
 
-/* ---------- 7 media: animation stage and video link ---------- */
+/* ---------- 7 media: a step's video, and the YouTube link ---------- */
 .stage {
   position: relative; overflow: hidden;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 4 / 5;
   border-radius: 21px;
   background: #1d2529;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 0 10px 22px -12px rgba(0, 0, 0, .55);
 }
-.stage > svg, .stage > img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.stage-cap { margin: 9px 8px 0; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.stage > video { display: block; width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+.clip-play {
+  position: absolute; inset: 0; margin: auto; width: 62px; height: 62px; padding: 0;
+  border: 0; border-radius: 50%; cursor: pointer;
+  background: rgba(0, 0, 0, .55) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 7l9 5-9 5z' fill='%23fff'/%3E%3C/svg%3E") center / 38px no-repeat;
+  transition: opacity .2s;
+}
+.stage.is-playing .clip-play { opacity: 0; }
+.clip-seek { display: block; width: calc(100% - 12px); margin: 8px 6px 0; accent-color: var(--accent); }
 
 .yt {
   display: flex; align-items: center; gap: 12px;
@@ -398,62 +405,14 @@ textarea.field { min-height: 76px; resize: vertical; display: block; }
 .t-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .t-foot label { cursor: pointer; }
 
-/* ---------- 10 scenes (svg animations, see js/scenes.js) ---------- */
-.scene .a {
-  animation-duration: var(--dur, 2.4s);
-  animation-timing-function: var(--ease, ease-in-out);
-  animation-iteration-count: infinite;
-  animation-direction: var(--dir, alternate);
-  animation-delay: calc(var(--d, 0s) - var(--t, 0s));
-  animation-play-state: var(--play, paused);
-}
-.stage.is-playing { --play: running; }
-/* pivot on the element's own centre instead of the local origin */
-.scene .c { transform-box: fill-box; transform-origin: center; }
-
-.scene .mv { animation-name: sk-move; }
-.scene .orbit { animation-name: sk-orbit; --dir: normal; --ease: linear; }
-.scene .scrunch { animation-name: sk-scrunch; --dir: normal; }
-.scene .squeeze { animation-name: sk-squeeze; --dir: normal; }
-.scene .flow { animation-name: sk-flow; --dir: normal; --ease: linear; --dur: .9s; }
-.scene .fade { animation-name: sk-fade; }
-.scene .zone { animation-name: sk-glow; --dur: 1.3s; opacity: .95; mix-blend-mode: hard-light; }
-
-@keyframes sk-move { from { transform: var(--from, none); } to { transform: var(--to, none); } }
-@keyframes sk-orbit {
-  0%, 100% { transform: translate(var(--r, 5px), 0); }
-  25% { transform: translate(0, var(--r, 5px)); }
-  50% { transform: translate(calc(var(--r, 5px) * -1), 0); }
-  75% { transform: translate(0, calc(var(--r, 5px) * -1)); }
-}
-@keyframes sk-scrunch {
-  0%, 100% { transform: translate(0, 0); }
-  40% { transform: var(--up, translate(0, -30px)); }
-  55% { transform: var(--up, translate(0, -30px)) scale(.9, .82); }
-  72% { transform: var(--up, translate(0, -30px)); }
-}
-@keyframes sk-squeeze { 0%, 100% { transform: scale(1); } 50% { transform: scale(var(--sx, .92), var(--sy, .86)); } }
-@keyframes sk-flow { to { stroke-dashoffset: -48; } }
-@keyframes sk-fade { from { opacity: var(--o1, 0); } to { opacity: var(--o2, 1); } }
-@keyframes sk-glow { from { opacity: .5; } to { opacity: .95; } }
-
-.scene .arrow { fill: none; stroke: #fff; stroke-opacity: .92; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.scene .no circle { fill: rgba(20, 24, 28, .55); stroke: #ff5745; stroke-width: 3.5; }
-.scene .no path { fill: none; stroke: #ff5745; stroke-width: 3.5; stroke-linecap: round; }
-.scene .water { fill: none; stroke: #a9dcee; stroke-opacity: .75; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 12 12; }
-.scene .air { fill: none; stroke: #fff; stroke-opacity: .55; stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 7 9; }
-.scene text { font: 600 13px var(--font-body); fill: #fff; }
-
-/* ---------- 11 motion ---------- */
+/* ---------- 10 motion ---------- */
 .reveal { animation: rise .7s cubic-bezier(.2, .7, .2, 1) both; animation-delay: calc(var(--n, 0) * 55ms); }
 @keyframes rise { from { opacity: 0; transform: translateY(16px); } }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition: none !important; }
-  /* the user can switch the how-to animations back on (html[data-motion="on"]) */
-  html:not([data-motion="on"]) *, html:not([data-motion="on"]) *::before, html:not([data-motion="on"]) *::after { animation: none !important; }
-  html[data-motion="on"] .backdrop i { animation: none; }
+  *, *::before, *::after { animation: none !important; }
 }
 
 /* the link from a Hair plan step to its 3D step (sim.html) */
