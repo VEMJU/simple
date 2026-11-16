@@ -80,7 +80,10 @@
         <video src="${esc(step.clip)}" poster="${esc(step.clip.replace(/\.mp4$/, '.jpg'))}" muted loop playsinline preload="none"></video>
         <button class="clip-play" type="button" aria-label="Play or pause the video for ${esc(step.title)}"></button>
       </div>
-      <input class="clip-seek" type="range" min="0" max="1000" value="0" aria-label="Position in the video">
+      <div class="clip-bar">
+        <input class="clip-seek" type="range" min="0" max="1000" value="0" aria-label="Position in the video">
+        <button class="clip-full" type="button" aria-label="Full screen" title="Full screen"></button>
+      </div>
     </div>`;
   }
 
@@ -168,6 +171,13 @@
     // Videos: tap the picture to play or pause, drag the slider to move through it.
     const clipOf = el => el.closest('.step-media')?.querySelector('video');
     view.addEventListener('click', e => {
+      if (e.target.closest('.clip-full')) {
+        const box = e.target.closest('.step-media');
+        if (document.fullscreenElement) document.exitFullscreen();
+        else if (box.requestFullscreen) box.requestFullscreen();   // the picture and its slider together
+        else clipOf(box).webkitEnterFullscreen?.();                 // iPhone: only the video itself can fill the screen
+        return;
+      }
       const v = e.target.closest('.stage') && clipOf(e.target);
       if (v) { if (v.paused) v.play(); else v.pause(); }
     });
