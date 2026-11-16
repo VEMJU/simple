@@ -4,7 +4,8 @@
  * To replace an animation with your own picture, save it in media/ and list it
  * in `images`, for example:  images: { shampoo: 'media/shampoo.png' }
  * A step's `scene` is the id of an animation in js/scenes/.
- * A step's `video` is a YouTube video: { id, title, channel }.
+ * A step's `video` is a YouTube video: { id, title, channel, start (seconds) }.
+ * A step's `sim` is the id of a step in the 3D guide (sim.html, js/sim-scenes.js).
  *
  * Checked on Nov 9-10, 2026 by web research with an independent re-check of
  * every claim (perm makers, cosmetic chemists, dermatology sources).
@@ -26,64 +27,56 @@ const HAIR = {
     },
     {
       id: 'wash', title: 'Wash day', numbered: true,
-      lede: 'Every 2 to 4 days, when the scalp says so. Start 3 to 4 hours before bed if air-drying.',
+      lede: 'Every 2 to 4 days, when the scalp says so. Mornings look best: start about 2 hours before you leave.',
       steps: [
         {
-          id: 'shampoo', title: 'Shampoo the scalp', amount: '1 teaspoon', scene: 'shampoo',
-          how: ['Lukewarm water, never hot. Soak the hair first.', 'Fingertip pads, not nails, for about a minute: hairline, crown, behind the ears, nape.', 'On the sides, stroke downward. Leave the lengths alone; the rinse cleans them.'],
-          why: 'Oil lives on the scalp. Scrubbing the lengths only dries the curl.',
-          video: { id: 'K55oE0fzxXM', title: 'SHOWER ROUTINE For Perm/Curly Hair (2023)', channel: 'LimitlessTommy' },
+          id: 'shampoo', title: 'Shampoo the scalp', amount: '1 teaspoon', scene: 'shampoo', sim: 'shampoo-top',
+          how: ['Warm water, never hot. Soak the hair for about 30 seconds first.', 'Fingertip pads, not nails, small circles, about a minute: front hairline, top, crown and back, behind the ears.', 'Sides last: from the temple, slide straight down to just above the ear. No circles there.', 'Leave the long hair alone; the suds rinsing down clean it. No scalp scrubber until late November.'],
+          why: 'Oil lives on the scalp. Scrubbing the lengths only dries the curl, and circles on the sides puff them out.',
+          video: { id: '5-PRy2Jrc9Y', start: 98, title: 'How to Wash Your Hair Properly (shampoo part)', channel: 'TheSalonGuy' },
         },
         {
-          id: 'rinse', title: 'Rinse well', scene: 'rinse',
-          how: ['Head tilted back, water running down the hair.', 'Keep going until it stops feeling slippery.'],
+          id: 'rinse', title: 'Rinse well', scene: 'rinse', sim: 'rinse',
+          how: ['Head tipped back a little, water running down the hair.', 'Squeeze gently until the water runs clear.'],
           why: 'Leftover shampoo dulls the hair and makes the scalp itch.',
         },
         {
-          id: 'condition', title: 'Condition and detangle', amount: 'Quarter size', scene: 'condition',
-          how: ['Spread it over both palms. Lengths and ends only, most on the ends, nothing on the first inch of roots.', 'While it is in, detangle with your fingers, starting at the ends and working up.', 'Leave it 2 to 3 minutes, then rinse well.'],
-          why: 'Permed ends are drier. This is the only time you detangle, ever.',
-          video: { id: 'G0TWwaybYrI', title: 'How To Detangle Curly Hair', channel: 'Koby Lomax' },
+          id: 'condition', title: 'Condition: ends first', amount: 'Quarter size', scene: 'condition', sim: 'cond-ends',
+          how: ['Squeeze some water out, then rub the conditioner between your palms.', 'Ends first (the tips, the part farthest from the scalp): slide your hands from the middle of the hair out to the tips. Back, top, then fringe. Never on the scalp.', 'Scrunch upward 3 or 4 times: top, back, fringe. Not the sides. Head upright.', 'Knots? Loosen them gently with your fingers now, never later.', 'Leave it 2 to 3 minutes (wash your body), then rinse lightly with cool water. Wash your face last.'],
+          why: 'Permed ends are the driest part. Conditioner left on skin can cause breakouts.',
+          video: { id: '5-PRy2Jrc9Y', start: 301, title: 'How to Wash Your Hair Properly (conditioner part)', channel: 'TheSalonGuy' },
         },
         {
-          id: 'blot', title: 'Squeeze with a T-shirt', scene: 'blot',
-          how: ['Squeeze handfuls upward in a cotton T-shirt, 10 to 15 times.', 'Stop as soon as it stops dripping. It should still look clearly wet.', 'Never rub, wring or wrap it.'],
+          id: 'blot', title: 'Squeeze, do not rub', scene: 'blot', sim: 'no-towel',
+          how: ['No towel rubbing. Squeeze the drips out with your hands (a cotton T-shirt is fine too).', 'Stop while it is still dripping wet.', 'Put your shirt on now, fast, so you never pull it over styled hair.'],
           why: 'Rubbing makes frizz. Product on wetter hair gives tighter clumps.',
-          video: { id: 'AFIXvud6IoU', title: 'HOW TO MICROPLOP', channel: 'Jordan Faith' },
         },
         {
-          id: 'cream', title: 'Curl cream', amount: 'Nickel size', scene: 'cream',
-          how: ['Rub it thin between your palms.', 'Ends first, then the middle. Not the roots, not the sides.', 'Add a small dab only where curls look undefined.'],
-          why: 'The cream gives softness and shine. Too much weighs the curl down.',
-          video: { id: 'vrvFjs3n3BQ', title: 'Washing And Styling My Perm', channel: 'HadieBoi' },
+          id: 'cream', title: 'Curl cream: fringe and sides', amount: 'Pea to half a nickel', sim: 'cream-fringe',
+          how: ['Clean hands. Rub the cream between your palms.', 'Fringe: squeeze it down from the hairline to the tips, then twist the front pieces into 2 or 3 curls resting just over your brows.', 'Sides: smooth it in, press flat and slide down toward your ears.'],
+          why: 'Your own test: cream looks best on the fringe and sides. It is softer and less wet-looking than gel.',
         },
         {
-          id: 'gel', title: 'Gel, then scrunch', amount: 'Nickel size', scene: 'scrunch',
-          how: ['Rub it thin on wet palms. Smooth it over the back, then the top, lifting the top layer.', 'Cup the ends, push up toward the scalp, squeeze, let go.', 'Fringe: only what is left on your hands. Never comb or rake after the gel.'],
-          why: 'Gel holds the curls apart while they dry.',
-          video: { id: '3FN1nv1r8aU', title: 'How To: Scrunch Out The Crunch (SOTC)', channel: 'Shruti Amin' },
+          id: 'gel', title: 'Gel: top and back', amount: 'Nickel size', scene: 'scrunch', sim: 'gel-glaze',
+          how: ['Rub it until both palms are shiny all over.', 'Glaze: flat hands lightly over the top and back, front to back, like petting a dog.', 'Squeeze: fingers close together, pull your hand down the hair from root toward tip. Never rake with spread fingers.', 'Scrunch: cup under the curls, lift up to your head, close gently, hold 1 to 2 seconds, let go. 5 or 6 around your head.'],
+          why: 'Gel holds the curls in clumps while they dry. Squeeze goes down to spread it; scrunch goes up to shape.',
+          video: { id: '436IXxrZPhI', start: 412, title: 'Curly Hair Routine (gel part; use less gel, skip the sectioning)', channel: 'Koby Lomax' },
         },
         {
-          id: 'sides', title: 'Press the sides flat', scene: 'sides',
-          how: ['Never scrunch the sides. Smooth them down with flat palms (the trace left on your hands is enough).', 'Drying them: press flat with your palm and aim the air downward, toward the jaw.', 'Hold your palm there until they cool.'],
-          why: 'The sides had a down perm. Scrunching or lifting makes them puff out.',
-          video: { id: 'n4ktly5Sxks', title: 'HOW TO STYLE A KOREAN MIDDLE PART (DOWN PERM)', channel: 'OPPAinSG' },
+          id: 'sides', title: 'Press the sides flat', scene: 'sides', sim: 'gel-sides',
+          how: ['If the sides puff or frizz: only the gel left on your hands, pressed flat over the cream. No new gel.', 'Want to try fluffy sides? Scrunch them gently instead. They will puff and look wider; the down perm keeps them fairly straight.'],
+          why: 'The sides had a down perm so they sit close to your head.',
         },
         {
-          id: 'fringe', title: 'Set the fringe', scene: 'fringe',
-          how: ['Split it into 4 to 6 curl groups with one finger.', 'Twist each one loosely around your finger, the way it already curls.', 'Let them fall forward over the eyebrows. Do not touch until dry.'],
-          video: { id: 'N1wMuk_aDic', title: 'Long Men’s Fringe on permed hair', channel: 'Serge Slavnov' },
+          id: 'dry', title: 'Dry without touching', scene: 'dry', sim: 'hands-off',
+          how: ['Hands off for about 1.5 to 2 hours. It will feel stiff and crunchy; that is the gel doing its job.', 'To check, press one fingertip at the roots on the back of your neck and at the crown. Cool, soft or darker means still damp.', 'Or a dryer on Warm and Low with a diffuser: cup the curls, hold 20 to 30 seconds, move on.'],
+          why: 'Touching wet curls is where frizz comes from.',
         },
         {
-          id: 'dry', title: 'Dry without touching', scene: 'dry',
-          how: ['Air-dry hands off. Thick hair takes 3 hours or more.', 'Or a dryer on Warm (never Hot) and Low speed with a diffuser: cup the curls, hold 20 to 30 seconds, move on.', 'Before bed, press your fingertips to the roots at the back. Cool or damp means not dry yet.'],
-          why: 'Touching wet curls is where frizz comes from. Damp hair on a pillow flattens and frizzes.',
-          video: { id: 'YZjo8d-boeM', title: 'HOW TO USE HAIRDRYER DIFFUSER ON PERMED/CURLED HAIR!', channel: 'FjCuts' },
-        },
-        {
-          id: 'cast', title: 'Break the cast', amount: 'Half a pump', scene: 'cast',
-          how: ['Only when fully dry and cool: squeeze the curls until the stiff gel feel is gone.', 'Optional shine: half a pump of serum on your palms, ends only.', 'Skip the serum if the curls look loose. Never on roots or fringe.'],
-          why: 'This is what turns stiff, wet-looking curls into soft, glossy ones.',
+          id: 'cast', title: 'Scrunch out the crunch, then fluff', scene: 'cast', sim: 'crunch',
+          how: ['Only when 100% dry: dry hands, cup the curls and squeeze up gently until the stiff feel is gone.', 'Fluff the roots on top: fingertips in to the scalp, a small side-to-side wiggle, pull straight out.', 'Split big curls into 2 or 3 smaller ones. Split the fringe into 2 or 3 curls over your brows. Then stop touching.'],
+          why: 'This turns the stiff, wet look into the dry, fluffy look you want.',
+          video: { id: '3FN1nv1r8aU', title: 'How To: Scrunch Out The Crunch (25 seconds)', channel: 'Shruti Amin' },
         },
       ],
     },
@@ -92,8 +85,8 @@ const HAIR = {
       lede: '3 to 7 minutes. Do it first thing, so it dries while you get ready.',
       steps: [
         {
-          id: 'refresh', title: 'Refresh', scene: 'refresh',
-          how: ['Looks good? Leave it.', 'A few flat or frizzy spots: wet hands or a few sprays of water, scrunch up, re-twist the fringe.', 'Whole head flat: mist until evenly damp, scrunch, dry hands off.', 'No hold: a pea of gel thinned with water, on damp hair only. No serum.'],
+          id: 'refresh', title: 'Refresh', scene: 'refresh', sim: 'refresh-spray',
+          how: ['Looks good? Leave it.', 'Curls fine but flat or messy: spray with water until damp, scrunch, let it dry.', 'Frizzy or dry spots: water, then a pea of curl cream on just those spots.', 'Hands off 15 to 30 minutes while it dries, then fluff. No brush, no comb.'],
           video: { id: 'z-HUJgdMcEE', title: 'Hair Tip: After your perm', channel: 'Curl Cult' },
         },
       ],
@@ -101,7 +94,7 @@ const HAIR = {
     {
       id: 'night', title: 'Every night', short: 'Nights',
       steps: [
-        { id: 'sleep', title: 'Sleep on satin', scene: 'sleep', how: ['Hair fully dry.', 'Satin pillowcase. Wash it weekly.'], why: 'Going to bed dry is what protects the curl. Satin just cuts frizz.' },
+        { id: 'sleep', title: 'Sleep on satin', scene: 'sleep', sim: 'night', how: ['Hair fully dry.', 'Satin pillowcase. Wash it weekly.'], why: 'Going to bed dry is what protects the curl. Satin just cuts frizz.' },
       ],
     },
     {
@@ -178,7 +171,7 @@ const HAIR = {
   kitNote: 'About $58, or $65 with the pillowcase. A dryer is optional.',
   kit: [
     { role: 'Shampoo + conditioner', name: 'SheaMoisture Coconut & Hibiscus Curl & Shine', price: '~$18', url: 'https://www.amazon.com/dp/B00SG6NAHK' },
-    { role: 'Curl cream', name: 'Amos Professional Curling Essence 2X (check the box says Amos, not Mise-en-scène)', price: '~$16', url: 'https://www.amazon.com/dp/B0FMDQT1L2' },
+    { role: 'Curl cream (using an OKAY Men cream for now)', name: 'Amos Professional Curling Essence 2X (check the box says Amos, not Mise-en-scène)', price: '~$16', url: 'https://www.amazon.com/dp/B0FMDQT1L2' },
     { role: 'Gel', name: 'Aussie Instant Freeze Gel, 7 oz tube (not the hairspray)', price: '~$5', url: 'https://www.amazon.com/dp/B000NFCWZ8' },
     { role: 'Shine (optional)', name: 'Garnier Fructis Sleek & Shine Serum', price: '~$7', url: 'https://www.amazon.com/s?k=Garnier+Fructis+Sleek+%26+Shine+Anti-Frizz+Serum+5.1+oz' },
     { role: 'Weekly deep conditioner', name: 'Aussie 3 Minute Miracle Moist', price: '~$7', url: 'https://www.amazon.com/s?k=Aussie+3+Minute+Miracle+Moist+16+oz' },
@@ -186,7 +179,7 @@ const HAIR = {
     { role: 'Optional', name: 'Satin pillowcase', price: '~$7', url: 'https://www.amazon.com/s?k=satin+pillowcase' },
   ],
 
-  videoNote: 'Videos were checked to exist and play; I picked them by title and channel, not by watching all of them. If one does not match the step, skip it.',
+  videoNote: 'The shampoo, conditioner and gel videos start at the right moment and were checked by reading what is said in them. Where a video differs from this plan, follow the plan.',
 
   sources: [
     { title: 'Arimino perm FAQ', url: 'https://www.arimino.co.jp/contact/faq/' },

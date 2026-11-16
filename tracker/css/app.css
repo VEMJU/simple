@@ -455,3 +455,7 @@ textarea.field { min-height: 76px; resize: vertical; display: block; }
   html:not([data-motion="on"]) *, html:not([data-motion="on"]) *::before, html:not([data-motion="on"]) *::after { animation: none !important; }
   html[data-motion="on"] .backdrop i { animation: none; }
 }
+
+/* the link from a Hair plan step to its 3D step (sim.html) */
+.sim-link { display: inline-block; margin: 10px 0 2px; text-decoration: none; }
+a.btn { display: inline-block; color: inherit; text-decoration: none; }

@@ -67,6 +67,7 @@
           <span class="chip">${esc(mask)}</span>
           <span class="chip">Fringe trim ${after(HAIR.trim.from)} to ${after(HAIR.trim.to)}</span>
         </div>
+        <p class="motion-note"><a class="btn primary" href="sim.html">See every step in 3D</a></p>
       </div>`;
   }
 
@@ -110,6 +111,7 @@
           </div>
           <ul class="how">${step.how.map(line => `<li>${esc(line)}</li>`).join('')}</ul>
           ${step.why ? `<p class="why"><b>Why.</b> ${esc(step.why)}</p>` : ''}
+          ${step.sim ? `<a class="btn small sim-link" href="sim.html#${esc(step.sim)}">See it in 3D</a>` : ''}
           ${videoHtml(step.video)}
         </div>
       </article>`;

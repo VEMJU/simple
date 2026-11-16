@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simple: 3D hair guide</title>
+<script>
+  (function () {
+    var saved = null;
+    try { saved = localStorage.getItem('theme'); } catch (e) {}
+    var system = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = saved === 'dark' || saved === 'light' ? saved : system;
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..700,0..100;1,9..144,300..700,0..100&display=swap">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/sim.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body class="sim-page">
+<div class="backdrop" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<header class="top glass">
+  <span class="brand">Simple<b>.</b></span>
+  <a class="btn small" href="index.html">Back to plan</a>
+</header>
+
+<main>
+  <div class="hero">
+    <p class="eyebrow">Every step · drag to turn the head</p>
+    <h1>See it in <em>3D.</em></h1>
+  </div>
+
+  <div class="sim glass" id="sim">
+    <div class="sim-main">
+      <div class="sim-stage" id="simStage">
+        <p class="sim-load" id="simLoad">Loading the model…</p>
+        <p class="sim-no" id="simNo" hidden>✕ Don't do this</p>
+        <p class="sim-rep" id="simRep" hidden></p>
+        <button class="btn small sim-toggle" id="simPanelBtn" type="button" aria-controls="simPanel" aria-expanded="true">Hide steps</button>
+      </div>
+      <div class="sim-cap">
+        <p class="sim-count" id="simCount"></p>
+        <h2 id="simTitle"></h2>
+        <p id="simText"></p>
+      </div>
+      <div class="sim-ctl">
+        <button class="btn small" id="simPrev" type="button">Back</button>
+        <button class="btn small primary" id="simPlay" type="button">Pause</button>
+        <button class="btn small" id="simNext" type="button">Next</button>
+        <button class="btn small" id="simSpeed" type="button">Slow</button>
+        <button class="btn small" id="simAll" type="button" aria-pressed="false">Play all</button>
+        <span class="sim-views">
+          <button class="chip" type="button" data-cam="front">Front</button>
+          <button class="chip" type="button" data-cam="side">Side</button>
+          <button class="chip" type="button" data-cam="back">Back</button>
+        </span>
+      </div>
+    </div>
+    <!-- The exact instructions for the step on screen, then every step to jump to -->
+    <aside class="sim-panel" id="simPanel" aria-label="This step, exactly">
+      <div id="simDetail"></div>
+      <p class="sim-count">All steps</p>
+      <div class="sim-steps" id="simSteps"></div>
+      <p class="sim-total" id="simTotal"></p>
+    </aside>
+  </div>
+  <p class="sources">Head scan: Lee Perry-Smith, CC BY 3.0. Hand model: WebXR Input Profiles, MIT.</p>
+</main>
+
+<script type="module" src="js/sim3d.js"></script>
+</body>
+</html>
