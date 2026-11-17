@@ -1,8 +1,8 @@
 /* Checks the permit study data after an edit:  node tracker/tools/check-permit.js */
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
 const js = f => fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8');
-const { PERMIT: P, PERMIT_SIGNS: SIGNS, PERMIT_QUESTIONS: QS } =
-  vm.runInNewContext(js('permit-data.js') + js('permit-questions.js') + ';({ PERMIT, PERMIT_SIGNS, PERMIT_QUESTIONS })');
+const { PERMIT: P, PERMIT_SIGNS: SIGNS, PERMIT_QUESTIONS: QS, PERMIT_MORE: MORE } =
+  vm.runInNewContext(js('permit-data.js') + js('permit-questions.js') + js('permit-more.js') + ';({ PERMIT, PERMIT_SIGNS, PERMIT_QUESTIONS, PERMIT_MORE })');
 
 const topics = new Set(P.topics.map(t => t.id)), unique = list => new Set(list).size === list.length;
 assert(unique(QS.map(q => q.id)), 'two questions share an id');
@@ -13,6 +13,8 @@ for (const q of QS) {
   assert(q.q && q.why, `${q.id}: needs a question and a reason`);
   assert(!q.sign || SIGNS[q.sign], `${q.id}: unknown sign ${q.sign}`);
 }
+for (const q of QS) assert(MORE[q.id] || q.sign, `${q.id}: needs a second explanation in permit-more.js`);
+for (const id of Object.keys(MORE)) assert(QS.some(q => q.id === id), `permit-more.js: no question ${id}`);
 for (const t of P.topics) assert(QS.some(q => q.t === t.id) && t.know.length, `${t.id}: needs questions and a must-know list`);
 const M = P.mock, nSigns = QS.filter(q => q.t === 'signs').length;
 assert(M.pass <= M.aim && M.aim <= M.size && nSigns >= M.signs && QS.length - nSigns >= M.size - M.signs, 'mock test settings');

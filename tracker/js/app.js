@@ -420,12 +420,15 @@
     const mocks = Array.isArray(saved.mocks) ? saved.mocks : [];   // the latest mock test scores
     // miss: how often each question was missed. A right answer takes one off. Two or more makes a weak spot.
     const miss = saved.miss && typeof saved.miss === 'object' ? saved.miss : {};
+    const picks = saved.picks && typeof saved.picks === 'object' ? saved.picks : {};   // the wrong answer chosen last time
     const weak = () => QS.filter(q => miss[q.id] >= 2).sort((a, b) => miss[b.id] - miss[a.id]);
     // The test date can be moved in the app. A moved date is saved and wins over the one in the data file.
     let moved = /^\d{4}-\d\d-\d\d$/.test(saved.date) ? saved.date : undefined;
     const testDate = moved || P.testDate;
-    const save = () => store.set(PERMIT_KEY, { done: [...done], right: [...right], missed: [...missed], mocks, miss, date: moved });
+    const save = () => store.set(PERMIT_KEY, { done: [...done], right: [...right], missed: [...missed], mocks, miss, picks, date: moved });
     const topic = id => P.topics.find(t => t.id === id);
+    // the second, plainer explanation (js/permit-more.js); a sign question uses the sign's own meaning
+    const more = q => PERMIT_MORE[q.id] || (q.sign ? PERMIT_SIGNS[q.sign].means : '');
     const tasks = [...P.days.flatMap(d => d.tasks), ...P.bring];
     const undone = list => list.filter(t => !done.has(t.id));
 
@@ -581,7 +584,9 @@
       $('#pReady').classList.toggle('is-ready', ready);
       const spots = weak();
       $('#pWeak').innerHTML = spots.length
-        ? `<ul class="how">${spots.slice(0, 12).map(q => `<li>${q.sign ? sign(q.sign) : ''}<b>${esc(q.q)}</b> ${esc(q.a[0])}.<span class="src">${esc(q.why)}</span></li>`).join('')}</ul>
+        ? `<ul class="how">${spots.slice(0, 12).map(q => `<li>${q.sign ? sign(q.sign) : ''}<b>${esc(q.q)}</b> ${esc(q.a[0])}.<span class="src">${esc(q.why)}</span>
+            <details class="again"><summary>Explain it again</summary>
+              ${picks[q.id] ? `<p>Last time you chose: ${esc(picks[q.id])}.</p>` : ''}<p>${esc(more(q))}</p></details></li>`).join('')}</ul>
            <p><button class="btn small" type="button" data-quiz="weak">Practice these</button></p>`
         : '<p>Nothing here yet. A question you miss twice is listed here with its answer, until you get it right again.</p>';
 
@@ -609,6 +614,9 @@
     /* The quiz: one question at a time, with the reason after each answer. */
     const box = $('#pQuiz');
     let quiz = null;
+    // a mock test shows how long you have been at it
+    const clock = () => { const s = Math.floor((Date.now() - quiz.t0) / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+    setInterval(() => { const c = $('[data-clock]', box); if (c && quiz) c.textContent = clock(); }, 1000);
     const quizHead = extra => `<div class="quiz-head"><span class="chip accent">${esc(quiz.title)}</span>${extra}<button class="btn small" type="button" data-quit>Close</button></div>`;
 
     function startQuiz(set) {
@@ -624,7 +632,7 @@
         list = [...all.filter(q => !right.has(q.id)), ...all.filter(q => right.has(q.id))].slice(0, 15);   // not yet mastered first
       }
       // exam: a mock test shows no answers until the end, like the real test
-      quiz = { set, title, list, exam: set === 'mock', i: 0, score: 0, wrong: [], from: quiz ? quiz.from : window.scrollY };
+      quiz = { set, title, list, exam: set === 'mock', t0: Date.now(), i: 0, score: 0, wrong: [], from: quiz ? quiz.from : window.scrollY };
       box.hidden = false;
       if (list.length) ask();
       else box.innerHTML = quizHead('') + '<h3 class="quiz-q">Nothing to redo right now.</h3><p>Questions you get wrong are collected here until you get them right.</p>';
@@ -635,7 +643,7 @@
       const q = quiz.list[quiz.i];
       quiz.opts = shuffle(q.a);
       box.innerHTML = `
-        ${quizHead(`<span class="chip">Question ${quiz.i + 1} of ${quiz.list.length}</span>`)}
+        ${quizHead(`<span class="chip">Question ${quiz.i + 1} of ${quiz.list.length}</span>${quiz.exam ? `<span class="chip" data-clock>${clock()}</span>` : ''}`)}
         <div class="bar quiz-bar" style="--p:${quiz.i / quiz.list.length}"><i></i></div>
         <div class="quiz-body">
           ${q.sign ? `<div class="quiz-sign">${sign(q.sign)}</div>` : ''}
@@ -649,7 +657,7 @@
     function answer(btn) {
       const q = quiz.list[quiz.i], is = b => quiz.opts[b.dataset.i] === q.a[0], ok = is(btn);
       if (ok) { quiz.score++; right.add(q.id); missed.delete(q.id); if (miss[q.id]) miss[q.id]--; }
-      else { right.delete(q.id); missed.add(q.id); quiz.wrong.push(q); miss[q.id] = (miss[q.id] || 0) + 1; }
+      else { right.delete(q.id); missed.add(q.id); quiz.wrong.push(q); miss[q.id] = (miss[q.id] || 0) + 1; picks[q.id] = quiz.opts[btn.dataset.i]; }
       save(); counts();
       if (quiz.exam) return next();
       $$('.opt', box).forEach(b => { b.disabled = true; b.classList.toggle('right', is(b)); });
@@ -658,6 +666,7 @@
       $('.quiz-after', box).innerHTML = `
         <p class="verdict ${ok ? 'ok' : 'no'}">${ok ? 'Correct.' : 'Not this one.'}</p>
         <p>${esc(q.why)}</p>
+        ${ok ? '' : `<p class="again-text">${esc(more(q))}</p>`}
         <p class="src">${esc(topic(q.t).title)}</p>
         <button class="btn primary" type="button" data-next>${quiz.i === quiz.list.length - 1 ? 'See the result' : 'Next question'}</button>`;
       $('[data-next]', box).focus();
@@ -671,7 +680,7 @@
         <div class="quiz-body result">
           <div class="ring ${mock && !pass ? 'no' : 'ok'}" style="--p:${quiz.score / n}">${RING}<b>${quiz.score}</b><span>of ${n}</span></div>
           <h3 class="quiz-q" tabindex="-1">${mock ? (pass ? 'That would pass.' : 'That would not pass yet.') : clean ? 'All correct.' : 'Keep going.'}</h3>
-          ${mock ? `<p>The real test needs ${MOCK.pass} of ${MOCK.size}. Aim for ${MOCK.aim} here.</p>` : ''}
+          ${mock ? `<p>The real test needs ${MOCK.pass} of ${MOCK.size}. Aim for ${MOCK.aim} here. Your time: ${clock()}.</p>` : ''}
           ${clean ? '' : `<p class="src">To learn again:</p><ul class="how">${quiz.wrong.map(q => `<li>${q.sign ? sign(q.sign) : ''}<b>${esc(q.q)}</b> ${esc(q.a[0])}.${quiz.exam ? `<span class="src">${esc(q.why)}</span>` : ''}</li>`).join('')}</ul>`}
           <div class="quiz-end">
             <button class="btn primary" type="button" data-quiz="${esc(quiz.set)}">${mock ? 'Another mock test' : 'Go again'}</button>
