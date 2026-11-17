@@ -26,6 +26,7 @@ const shown = [...P.signGroups.flatMap(g => g.ids), ...P.signKinds.map(k => k[2]
 for (const id of shown) assert(SIGNS[id], `unknown sign ${id}`);
 for (const id of Object.keys(SIGNS)) assert(shown.includes(id), `sign ${id} is never shown`);
 assert(!isNaN(new Date(P.testDate)), 'test date');
+for (const s of Object.values(SIGNS)) { const m = s.svg.match(/src="([^"]+)"/); assert(!m || fs.existsSync(path.join(__dirname, '..', m[1])), `missing picture for sign ${s.id}`); }
 
 const count = id => QS.filter(q => q.t === id).length;
 console.log(`ok: ${QS.length} questions (${P.topics.map(t => `${t.id} ${count(t.id)}`).join(', ')}), ${tasks.length} tasks, ${P.days.length} days, ${Object.keys(SIGNS).length} signs`);

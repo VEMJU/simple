@@ -418,7 +418,10 @@
     // done: ticked tasks. right: questions answered correctly last time. missed: answered wrongly last time.
     const done = setOf(saved.done), right = setOf(saved.right), missed = setOf(saved.missed);
     const mocks = Array.isArray(saved.mocks) ? saved.mocks : [];   // the latest mock test scores
-    const save = () => store.set(PERMIT_KEY, { done: [...done], right: [...right], missed: [...missed], mocks });
+    // miss: how often each question was missed. A right answer takes one off. Two or more makes a weak spot.
+    const miss = saved.miss && typeof saved.miss === 'object' ? saved.miss : {};
+    const weak = () => QS.filter(q => miss[q.id] >= 2).sort((a, b) => miss[b.id] - miss[a.id]);
+    const save = () => store.set(PERMIT_KEY, { done: [...done], right: [...right], missed: [...missed], mocks, miss });
     const topic = id => P.topics.find(t => t.id === id);
     const tasks = [...P.days.flatMap(d => d.tasks), ...P.bring];
     const undone = list => list.filter(t => !done.has(t.id));
@@ -502,6 +505,8 @@
         <div class="card glass"><ul class="rows sets">
           ${setRow('mock', 'Mock test')}${setRow('missed', 'Missed questions')}${P.topics.map(t => setRow(t.id, t.title)).join('')}
         </ul></div>
+        <h3 class="sub" id="p-weak">Weak spots</h3>
+        <div class="card glass weak" id="pWeak"></div>
         <div class="quiz glass" id="pQuiz" hidden></div>
       </section>
 
@@ -565,10 +570,15 @@
         <p class="v">${ready ? `Your last two mock tests were ${MOCK.aim} of ${MOCK.size} or better.` : `You are ready when two mock tests in a row are ${MOCK.aim} of ${MOCK.size} or better. The real test needs ${MOCK.pass}.`}</p>
         ${mocks.length ? `<div class="stats">${mocks.map(s => `<span class="chip ${s >= MOCK.pass ? 'ok' : 'accent'}">${s}/${MOCK.size}</span>`).join('')}</div>` : ''}`;
       $('#pReady').classList.toggle('is-ready', ready);
+      const spots = weak();
+      $('#pWeak').innerHTML = spots.length
+        ? `<ul class="how">${spots.slice(0, 12).map(q => `<li>${q.sign ? sign(q.sign) : ''}<b>${esc(q.q)}</b> ${esc(q.a[0])}.<span class="src">${esc(q.why)}</span></li>`).join('')}</ul>
+           <p><button class="btn small" type="button" data-quiz="weak">Practice these</button></p>`
+        : '<p>Nothing here yet. A question you miss twice is listed here with its answer, until you get it right again.</p>';
 
       $$('[data-set]', view).forEach(el => {
         const id = el.dataset.set, qs = QS.filter(q => q.t === id);
-        el.textContent = id === 'mock' ? `${MOCK.size} questions like the real test. ${MOCK.pass} to pass.`
+        el.textContent = id === 'mock' ? `${MOCK.size} questions like the real test, answers at the end. ${MOCK.pass} to pass.`
           : id === 'missed' ? (nMissed ? `${nMissed} to redo` : 'Nothing to redo right now.')
           : `${qs.filter(q => right.has(q.id)).length} of ${qs.length} mastered`;
       });
@@ -596,15 +606,16 @@
       let list, title = 'Mock test';
       if (set === 'mock') {   // the size of the real test, with a few sign questions in it
         list = shuffle([...shuffle(QS.filter(q => q.t === 'signs')).slice(0, MOCK.signs), ...shuffle(QS.filter(q => q.t !== 'signs')).slice(0, MOCK.size - MOCK.signs)]);
-      } else if (set === 'missed') {
-        title = 'Missed questions';
-        list = shuffle(QS.filter(q => missed.has(q.id))).slice(0, 15);
+      } else if (set === 'missed' || set === 'weak') {
+        title = set === 'weak' ? 'Weak spots' : 'Missed questions';
+        list = shuffle(set === 'weak' ? weak() : QS.filter(q => missed.has(q.id))).slice(0, 15);
       } else {
         const ids = set.split(','), all = shuffle(QS.filter(q => ids.includes(q.t)));
         title = ids.map(id => topic(id).short).join(' + ');
         list = [...all.filter(q => !right.has(q.id)), ...all.filter(q => right.has(q.id))].slice(0, 15);   // not yet mastered first
       }
-      quiz = { set, title, list, i: 0, score: 0, wrong: [], from: quiz ? quiz.from : window.scrollY };
+      // exam: a mock test shows no answers until the end, like the real test
+      quiz = { set, title, list, exam: set === 'mock', i: 0, score: 0, wrong: [], from: quiz ? quiz.from : window.scrollY };
       box.hidden = false;
       if (list.length) ask();
       else box.innerHTML = quizHead('') + '<h3 class="quiz-q">Nothing to redo right now.</h3><p>Questions you get wrong are collected here until you get them right.</p>';
@@ -621,17 +632,19 @@
           ${q.sign ? `<div class="quiz-sign">${sign(q.sign)}</div>` : ''}
           <h3 class="quiz-q" tabindex="-1">${esc(q.q)}</h3>
           <div class="quiz-opts">${quiz.opts.map((a, i) => `<button class="opt" type="button" data-i="${i}"><kbd>${'ABCD'[i]}</kbd><span>${esc(a)}</span></button>`).join('')}</div>
-          <div class="quiz-after" role="status"></div>
+          <div class="quiz-after" role="status">${quiz.exam ? '<p class="src">Mock test: you see the answers at the end.</p>' : ''}</div>
         </div>`;
     }
+    const next = () => { if (++quiz.i < quiz.list.length) ask(); else finish(); $('.quiz-q', box).focus(); };
 
     function answer(btn) {
       const q = quiz.list[quiz.i], is = b => quiz.opts[b.dataset.i] === q.a[0], ok = is(btn);
+      if (ok) { quiz.score++; right.add(q.id); missed.delete(q.id); if (miss[q.id]) miss[q.id]--; }
+      else { right.delete(q.id); missed.add(q.id); quiz.wrong.push(q); miss[q.id] = (miss[q.id] || 0) + 1; }
+      save(); counts();
+      if (quiz.exam) return next();
       $$('.opt', box).forEach(b => { b.disabled = true; b.classList.toggle('right', is(b)); });
       btn.classList.toggle('wrong', !ok);
-      if (ok) { quiz.score++; right.add(q.id); missed.delete(q.id); }
-      else { right.delete(q.id); missed.add(q.id); quiz.wrong.push(q); }
-      save(); counts();
       $('.quiz-bar', box).style.setProperty('--p', (quiz.i + 1) / quiz.list.length);
       $('.quiz-after', box).innerHTML = `
         <p class="verdict ${ok ? 'ok' : 'no'}">${ok ? 'Correct.' : 'Not this one.'}</p>
@@ -650,7 +663,7 @@
           <div class="ring ${mock && !pass ? 'no' : 'ok'}" style="--p:${quiz.score / n}">${RING}<b>${quiz.score}</b><span>of ${n}</span></div>
           <h3 class="quiz-q" tabindex="-1">${mock ? (pass ? 'That would pass.' : 'That would not pass yet.') : clean ? 'All correct.' : 'Keep going.'}</h3>
           ${mock ? `<p>The real test needs ${MOCK.pass} of ${MOCK.size}. Aim for ${MOCK.aim} here.</p>` : ''}
-          ${clean ? '' : `<p class="src">To learn again:</p><ul class="how">${quiz.wrong.map(q => `<li>${q.sign ? sign(q.sign) : ''}<b>${esc(q.q)}</b> ${esc(q.a[0])}.</li>`).join('')}</ul>`}
+          ${clean ? '' : `<p class="src">To learn again:</p><ul class="how">${quiz.wrong.map(q => `<li>${q.sign ? sign(q.sign) : ''}<b>${esc(q.q)}</b> ${esc(q.a[0])}.${quiz.exam ? `<span class="src">${esc(q.why)}</span>` : ''}</li>`).join('')}</ul>`}
           <div class="quiz-end">
             <button class="btn primary" type="button" data-quiz="${esc(quiz.set)}">${mock ? 'Another mock test' : 'Go again'}</button>
             <button class="btn" type="button" data-quit>Close</button>
@@ -666,7 +679,7 @@
       else if ((el = hit('[data-jump]'))) document.getElementById(el.dataset.jump)?.scrollIntoView({ block: 'start' });
       else if ((el = hit('[data-goday]'))) { const day = $(`.day[data-day="${el.dataset.goday}"]`, view); day.open = true; day.scrollIntoView({ block: 'start' }); }
       else if ((el = hit('.opt'))) answer(el);
-      else if (hit('[data-next]')) { if (++quiz.i < quiz.list.length) ask(); else finish(); $('.quiz-q', box).focus(); }
+      else if (hit('[data-next]')) next();
       else if (hit('[data-quit]')) { box.hidden = true; window.scrollTo(0, quiz.from); quiz = null; }   // back to where the quiz was started
       else if ((el = hit('[data-cover]'))) {   // self-test: hide the answers, tap one to see it
         const sec = el.closest('.section'), on = sec.classList.toggle('cover');
@@ -698,4 +711,12 @@
   initTracker();
   renderPermit();
   show(location.hash.slice(1), { scroll: false });
+
+  // Without a connection the app opens from a saved copy (sw.js). The sign pictures are added to that
+  // copy here, because the page only loads the ones you scroll to.
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* the app works as before, only not offline */ });
+    const pics = Object.values(PERMIT_SIGNS).map(s => (s.svg.match(/src="([^"]+)"/) || [])[1]).filter(Boolean);
+    caches.open('simple-v1').then(c => c.keys().then(saved => saved.length < pics.length && c.addAll(pics))).catch(() => {});
+  }
 })();

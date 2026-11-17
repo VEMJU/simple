@@ -421,7 +421,7 @@ textarea.field { min-height: 76px; resize: vertical; display: block; }
 
 /* ---------- 10 permit: the study plan ---------- */
 #view-permit .hero h1 { font-size: clamp(42px, 10.5vw, 78px); }
-#view-permit .section, .day, .quiz { scroll-margin-top: 72px; }
+#view-permit .section, .day, .quiz, #p-weak { scroll-margin-top: 72px; }
 .sub { font-size: 21px; padding: 20px 8px 10px; }
 .card > .how { padding: 16px 0; }
 .chip.ok { background: var(--ok-soft); color: var(--ok); box-shadow: none; }
@@ -532,9 +532,12 @@ textarea.field { min-height: 76px; resize: vertical; display: block; }
 .verdict { font-weight: 700; }
 .verdict.ok { color: var(--ok); }
 .verdict.no { color: var(--accent); }
-.quiz .src { font-size: 13px; color: var(--ink-3); }
+.quiz .src, .weak .src { font-size: 13px; color: var(--ink-3); }
 .quiz .how { margin-top: 8px; }
-.quiz .how .sign { width: 30px; vertical-align: middle; margin-right: 8px; }
+.quiz .how .sign, .weak .sign { width: 30px; vertical-align: middle; margin-right: 8px; }
+.quiz .how .src, .weak .src { display: block; margin-top: 2px; }
+.weak > p { padding: 12px 0; color: var(--ink-2); }
+.weak > .how + p { padding-top: 0; }
 .quiz-end { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 .result { display: grid; justify-items: center; text-align: center; }
 .result .ring { margin-top: 20px; }
@@ -546,7 +549,7 @@ textarea.field { min-height: 76px; resize: vertical; display: block; }
 .cover .pairs li:not(.seen) .v { filter: blur(7px); opacity: .5; user-select: none; }
 
 .sign { display: inline-block; width: 64px; line-height: 0; }
-.sign svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .28)); }
+.sign svg, .sign img { display: block; width: 100%; height: auto; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .28)); }
 .sign text { font-family: Arial, Helvetica, sans-serif; font-weight: 700; text-anchor: middle; }
 .rows.kinds li { display: grid; grid-template-columns: 52px 1fr; align-items: center; gap: 0 16px; }
 .rows.kinds .sign { width: 52px; grid-row: 1 / span 2; }
