@@ -5,7 +5,7 @@
  * edition, chapters 1 to 6, read on pa.gov on 2026-11-16, plus form DL-180 (7-23) and
  * PennDOT's own review questions for chapters 2, 3 and 4.
  *
- * To move the test, change `testDate`: the days count back from it.
+ * `testDate` is the first test date. The days count back from it. The date picked in the app wins over it.
  * `node tools/check-permit.js` checks this file and the questions after an edit.
  */
 const PERMIT_SIGNS = (() => {
@@ -137,7 +137,7 @@ const PERMIT = (() => {
       { k: 'To pass', v: '15 right or more. That is 3 mistakes at most.' },
       { k: 'What it asks', v: 'Traffic signs, Pennsylvania’s driving laws and safe-driving practices. PennDOT’s own sample questions come from chapters 2, 3 and 4 of the Driver’s Manual.' },
       { k: 'Where', v: 'In person, at a PennDOT Driver License Center. It cannot be taken online.' },
-      { k: 'When', v: 'Saturday, November 21. Your centre opens at 8:30 AM and closes at 4:15 PM. Go when it opens.' },
+      { k: 'When', v: 'On your test date. Your centre is open 8:30 AM to 4:15 PM on Saturday, and most centres are closed on Sunday and Monday. Go when it opens.' },
       { k: 'One try a day', v: 'You may take the test only once on any day. If you fail, you can take it again the following business day.' },
       { k: 'Language', v: 'You can ask for the test in audio, or in one of 30 languages. Ask at the counter.' },
       { k: 'Aim', v: 'Do not aim for 15. Aim for 17 of 18 on the mock tests here, so a few nervous mistakes still pass.' },
@@ -472,6 +472,25 @@ const PERMIT = (() => {
       ] },
     ],
 
+    /* Rules that are easy to mix up. Shown under the numbers and printed on the cheat sheet. */
+    tricky: [
+      'Flashing red = STOP sign. Flashing yellow = slow down and go with care. Traffic light not working = four-way stop.',
+      'Yellow lines divide opposite directions. White lines divide lanes going the same way.',
+      'Left turn on red: only from a one-way street onto a one-way street.',
+      'Four-way stop, or no signs at all: first to arrive goes first. Same time: the driver on the LEFT yields.',
+      'Turning left: yield to oncoming traffic going straight.',
+      'School bus with red lights and stop arm: stop 10 feet away, from either direction. Only exception: the other side of a divided highway.',
+      'Emergency vehicle: pull to the curb and stop. Afterwards stay 500 feet behind it.',
+      'Skid: steer the way the rear is sliding, and stay off the brake. Blowout: hold the wheel, stay off the brake.',
+      'ABS brakes: press and hold. No ABS: press and release again and again.',
+      'High beams coming at you: flash yours, then look toward the right edge of the road.',
+      'Parking on a hill: downhill, wheels right. Uphill with a curb, wheels left. No curb, wheels right.',
+      'Hand signals: arm straight out = left. Arm up = right. Arm down = slowing or stopping.',
+      'Shapes: eight sides STOP, triangle YIELD, pennant NO PASSING ZONE, five sides SCHOOL, round RAILROAD AHEAD.',
+      'Alcohol: under 21 it is DUI at .02, adults at .08. Refusing the test: one-year suspension.',
+      'Headlights: sunset to sunrise, wipers on, work zones, or when you cannot see 1,000 feet.',
+    ],
+
     /* The colour and shape table: [what, colour and shape, example sign id]. */
     signKinds: [
       ['Regulatory', 'Black and white rectangle or square. A rule you must obey.', 'speed'],
@@ -500,6 +519,17 @@ const PERMIT = (() => {
       { id: 'b-ssn', text: 'Your original Social Security card, signed. A photo or copy is not accepted. No card: PennDOT lists other papers it takes instead, such as a W-2, or two of these: a Social Security receipt letter for a new card, a pay stub with your number, a health insurance card with your number. Call PennDOT at 717-412-5300 to confirm before you go.', links: [['If you have no card', 'https://www.pa.gov/agencies/dmv/driver-services/proof-of-identity-and-residency/customers-who-do-not-have-a-social-security-card']] },
       { id: 'b-pay', text: 'Payment by debit or credit card, check or money order. No cash. The form I read (July 2023) lists $45.50 for the permit and first four-year licence: check your printed form.' },
       { id: 'b-glasses', text: 'Your glasses or contact lenses, if you wear them. Your eyes are checked at the centre.' },
+    ],
+
+    /* Papers that can hold up the test. Ticked like tasks, but not counted in the plan's progress. */
+    papers: [
+      { id: 'p-ask', text: 'Asked my parents whether they have my birth certificate with the raised seal and my Social Security card.' },
+      { id: 'p-doc', text: 'The doctor filled in the back of form DL-180.' },
+      { id: 'p-bc-order', text: 'Birth certificate ordered. Born in New York City: a parent named on it orders it, online or with an appointment at 125 Worth Street for same-day pickup. Skip this line if your parents have it.', links: [['NYC birth certificates', 'https://www.nyc.gov/site/doh/services/birth-death-records-birth.page']] },
+      { id: 'p-bc', text: 'The birth certificate with the raised seal is in my hands.' },
+      { id: 'p-ss-order', text: 'New Social Security card requested. A parent applies with form SS-5 at a Social Security office. It comes by mail 5 to 10 business days later. Skip this line if your parents have the card.', links: [['Replace a card', 'https://www.ssa.gov/number-card/replace-card'], ['Form SS-5', 'https://www.ssa.gov/forms/ss-5.pdf']] },
+      { id: 'p-ss', text: 'The Social Security card is in my hands, and I signed it.' },
+      { id: 'p-date', text: 'The test date is set at the top of the plan.', jump: ['p-days', 'Go to the plan'] },
     ],
 
     /* Test day and what comes after it. */

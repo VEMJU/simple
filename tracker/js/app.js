@@ -421,13 +421,16 @@
     // miss: how often each question was missed. A right answer takes one off. Two or more makes a weak spot.
     const miss = saved.miss && typeof saved.miss === 'object' ? saved.miss : {};
     const weak = () => QS.filter(q => miss[q.id] >= 2).sort((a, b) => miss[b.id] - miss[a.id]);
-    const save = () => store.set(PERMIT_KEY, { done: [...done], right: [...right], missed: [...missed], mocks, miss });
+    // The test date can be moved in the app. A moved date is saved and wins over the one in the data file.
+    let moved = /^\d{4}-\d\d-\d\d$/.test(saved.date) ? saved.date : undefined;
+    const testDate = moved || P.testDate;
+    const save = () => store.set(PERMIT_KEY, { done: [...done], right: [...right], missed: [...missed], mocks, miss, date: moved });
     const topic = id => P.topics.find(t => t.id === id);
     const tasks = [...P.days.flatMap(d => d.tasks), ...P.bring];
     const undone = list => list.filter(t => !done.has(t.id));
 
     // The days count back from the test date: the last day is the test.
-    const [y, m, d] = P.testDate.split('-').map(Number);
+    const [y, m, d] = testDate.split('-').map(Number);
     const dayDate = i => new Date(y, m - 1, d - (N - 1 - i));
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const daysTo = date => Math.round((date - today) / DAY);
@@ -496,7 +499,8 @@
       </div>
       <div class="jump reveal" style="--n:2">${JUMP.map(([id, label]) => `<button class="chip" type="button" data-jump="${id}">${label}</button>`).join('')}</div>
 
-      ${head('p-days', `The ${N} days`, 'Tick each task when it is done. It is saved on this device.')}
+      ${head('p-days', `The ${N} days`, 'Tick each task when it is done. It is saved on this device. If the test moves, change the date and the days move with it.',
+        `<label class="date-pick">Test date <input type="date" id="pDate" value="${esc(testDate)}"></label>`)}
         ${P.days.map(dayHtml).join('')}
       </section>
 
@@ -510,8 +514,11 @@
         <div class="quiz glass" id="pQuiz" hidden></div>
       </section>
 
-      ${head('p-numbers', 'Numbers', 'The easy points. Hide the answers, say each one out loud, then tap the row to check.', cover('answers'))}
+      ${head('p-numbers', 'Numbers', 'The easy points. Hide the answers, say each one out loud, then tap the row to check.',
+        cover('answers') + ' <button class="btn small" type="button" data-print>Print the cheat sheet</button>')}
         ${P.numbers.map(g => `<h3 class="sub">${esc(g.title)}</h3>${rowsHtml(g.rows, true)}`).join('')}
+        <h3 class="sub">Easy to mix up</h3>
+        <div class="card glass"><ul class="how">${P.tricky.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>
       </section>
 
       ${head('p-signs', 'Signs', 'First the colour and shape rules, then the signs. Hide the meanings, say what a sign means, then tap it to check.', cover('meanings'))}
@@ -522,6 +529,8 @@
       </section>
 
       ${head('p-after', 'Test day', 'What goes in the folder, and what happens at the Driver License Center.')}
+        <h3 class="sub">Papers you are waiting for</h3>
+        <div class="card glass"><ul class="tasks">${P.papers.map(taskHtml).join('')}</ul></div>
         <h3 class="sub">In the folder</h3>
         <div class="card glass bring"><ul class="tasks">${P.bring.map(taskHtml).join('')}</ul></div>
         <h3 class="sub">On the day, and after</h3>
@@ -681,6 +690,11 @@
       else if ((el = hit('.opt'))) answer(el);
       else if (hit('[data-next]')) next();
       else if (hit('[data-quit]')) { box.hidden = true; window.scrollTo(0, quiz.from); quiz = null; }   // back to where the quiz was started
+      else if (hit('[data-print]')) {   // prints only the numbers and the mix-ups, on one page (.print-sheet in the CSS)
+        document.documentElement.classList.add('print-sheet');
+        window.addEventListener('afterprint', () => document.documentElement.classList.remove('print-sheet'), { once: true });
+        window.print();
+      }
       else if ((el = hit('[data-cover]'))) {   // self-test: hide the answers, tap one to see it
         const sec = el.closest('.section'), on = sec.classList.toggle('cover');
         el.textContent = on ? el.dataset.off : el.dataset.on;
@@ -690,12 +704,13 @@
       else if ((el = hit('.cover .pairs li, .cover .sign-card'))) el.classList.add('seen');
     });
     view.addEventListener('change', e => {
+      if (e.target.id === 'pDate' && e.target.value) { moved = e.target.value; save(); location.reload(); return; }   // every date on the page changes
       const t = e.target.closest('[data-task]');
       if (!t) return;
       if (t.checked) done.add(t.dataset.task); else done.delete(t.dataset.task);
       save(); counts();
       const group = t.closest('.day, .bring');   // the last tick of a day or of the folder list
-      if (t.checked && !$('[data-task]:not(:checked)', group)) celebrate(t);
+      if (group && t.checked && !$('[data-task]:not(:checked)', group)) celebrate(t);
     });
     // A to D (or 1 to 4) answer the question on a keyboard.
     document.addEventListener('keydown', e => {

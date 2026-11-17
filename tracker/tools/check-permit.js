@@ -17,7 +17,7 @@ for (const t of P.topics) assert(QS.some(q => q.t === t.id) && t.know.length, `$
 const M = P.mock, nSigns = QS.filter(q => q.t === 'signs').length;
 assert(M.pass <= M.aim && M.aim <= M.size && nSigns >= M.signs && QS.length - nSigns >= M.size - M.signs, 'mock test settings');
 
-const tasks = [...P.days.flatMap(d => d.tasks), ...P.bring];
+const tasks = [...P.days.flatMap(d => d.tasks), ...P.bring, ...P.papers];
 assert(unique(tasks.map(t => t.id)), 'two tasks share an id');
 for (const d of P.days) for (const id of d.topics) assert(topics.has(id), `day "${d.title}": unknown topic ${id}`);
 for (const t of tasks) if (t.quiz && !['mock', 'missed'].includes(t.quiz)) for (const id of t.quiz.split(',')) assert(topics.has(id), `${t.id}: unknown topic ${id}`);

@@ -426,6 +426,29 @@ textarea.field { min-height: 76px; resize: vertical; display: block; }
 .card > .how { padding: 16px 0; }
 .chip.ok { background: var(--ok-soft); color: var(--ok); box-shadow: none; }
 .section > header .btn { margin-top: 12px; }
+.date-pick { display: inline-flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; font-weight: 600; }
+.date-pick input { padding: 7px 12px; border: 0; border-radius: 999px; font: inherit; color: inherit; background: var(--field); box-shadow: inset 0 0 0 1px var(--line); }
+:root[data-theme="dark"] .date-pick input { color-scheme: dark; }
+
+/* the printed cheat sheet: only the Numbers section, small, in three columns, black on white.
+   The script puts .print-sheet on <html> just for the print. */
+html.print-sheet[data-theme] { --ink: #000; --ink-2: #000; --ink-3: #333; --line: #bbb; --accent: #000; background: #fff; }
+.print-sheet body { background: #fff; }
+.print-sheet .backdrop, .print-sheet .top, .print-sheet .tabs, .print-sheet .view:not(#view-permit),
+.print-sheet #view-permit > :not(#p-numbers), .print-sheet #p-numbers .btn, .print-sheet #p-numbers .lede { display: none !important; }
+.print-sheet main { width: auto; padding: 0; }
+.print-sheet #p-numbers { margin: 0; opacity: 1; transform: none; columns: 3; column-gap: 16px; font-size: 10px; line-height: 1.28; }
+.print-sheet #p-numbers > header { padding: 0; column-span: all; }
+.print-sheet #p-numbers h2 { font-size: 16px; margin-bottom: 4px; }
+.print-sheet #p-numbers .sub { padding: 7px 0 2px; font-size: 12px; break-after: avoid; }
+.print-sheet #p-numbers .card { padding: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; animation: none; }
+.print-sheet #p-numbers .card::before, .print-sheet #p-numbers .card::after { display: none; }
+.print-sheet #p-numbers .rows li { grid-template-columns: 66px 1fr; gap: 6px; padding: 1.5px 0; break-inside: avoid; }
+.print-sheet #p-numbers .pairs .v { filter: none; opacity: 1; }
+.print-sheet #p-numbers .how { padding: 2px 0; gap: 2px; }
+.print-sheet #p-numbers .how li { padding-left: 9px; break-inside: avoid; }
+.print-sheet #p-numbers .how li::before { width: 3px; height: 3px; left: 1px; }
+@page { margin: 10mm; }
 
 /* today's card: a ring with the days left, and what to do next */
 .now { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 20px; padding: 20px; --r: 30px; }
