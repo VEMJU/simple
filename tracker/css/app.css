@@ -2,7 +2,7 @@
    Simple: hair plan + tracker
    1 tokens   2 base      3 backdrop   4 glass
    5 chrome   6 plan      7 media      8 watch list
-   9 tracker  10 motion
+   9 tracker  10 permit   11 motion
    ========================================================= */
 
 /* ---------- 1 tokens ---------- */
@@ -17,6 +17,8 @@
   --accent: #d63c26;
   --accent-soft: rgba(255, 106, 85, .17);
   --on-accent: #fff;
+  --ok: #1c7c45;
+  --ok-soft: rgba(46, 160, 90, .16);
 
   --glass: rgba(255, 255, 255, .6);
   --glass-2: rgba(255, 255, 255, .36);
@@ -44,6 +46,8 @@
   --accent: #ff8a76;
   --accent-soft: rgba(255, 106, 85, .2);
   --on-accent: #1a0e0b;
+  --ok: #6fdc98;
+  --ok-soft: rgba(80, 200, 130, .16);
 
   --glass: rgba(255, 255, 255, .085);
   --glass-2: rgba(255, 255, 255, .04);
@@ -188,21 +192,21 @@ a { color: inherit; }
   position: fixed; left: 50%; z-index: 30;
   bottom: max(14px, env(safe-area-inset-bottom));
   transform: translateX(-50%);
-  width: min(380px, calc(100% - 28px));
-  display: grid; grid-template-columns: repeat(3, 1fr);
+  width: min(430px, calc(100% - 28px));
+  display: grid; grid-template-columns: repeat(4, 1fr);
   padding: 6px;
   --r: 999px;
 }
 .tabs button {
   border: 0; background: none;
-  padding: 11px 6px; border-radius: 999px;
-  font-size: 14px; font-weight: 600; color: var(--ink-2);
+  padding: 11px 4px; border-radius: 999px;
+  font-size: 14px; font-weight: 600; color: var(--ink-2); white-space: nowrap;
   transition: color .25s;
 }
 .tabs button[aria-current="page"] { color: var(--ink); }
 .tabs .lens {
   position: absolute; z-index: 1; top: 6px; bottom: 6px; left: 6px;
-  width: calc((100% - 12px) / 3);
+  width: calc((100% - 12px) / 4);
   border-radius: 999px;
   background: linear-gradient(140deg, var(--lens-a), var(--lens-b));
   box-shadow: inset 0 1px 0 var(--rim-a), inset 0 -1px 0 var(--rim-b), 0 6px 16px -6px rgba(0, 0, 0, .28);
@@ -362,7 +366,7 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 0 14px 130px; }
   cursor: pointer;
   --r: 22px;
 }
-.watch-row input {
+.watch-row input, .task input {
   appearance: none; -webkit-appearance: none;
   width: 26px; height: 26px; margin: 1px 0 0;
   border-radius: 50%; border: 2px solid var(--ink-3);
@@ -370,8 +374,8 @@ main { width: min(760px, 100%); margin: 0 auto; padding: 0 14px 130px; }
   cursor: pointer;
   transition: background .2s, border-color .2s, transform .25s cubic-bezier(.3, 1.4, .5, 1);
 }
-.watch-row input:checked { background: var(--accent); border-color: var(--accent); transform: scale(1.06); }
-.watch-row input:checked::after {
+.watch-row input:checked, .task input:checked { background: var(--accent); border-color: var(--accent); transform: scale(1.06); }
+.watch-row input:checked::after, .task input:checked::after {
   content: ""; width: 6px; height: 11px; margin-top: -2px;
   border: solid var(--on-accent); border-width: 0 2.5px 2.5px 0;
   transform: rotate(45deg);
@@ -415,7 +419,170 @@ textarea.field { min-height: 76px; resize: vertical; display: block; }
 .t-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .t-foot label { cursor: pointer; }
 
-/* ---------- 10 motion ---------- */
+/* ---------- 10 permit: the study plan ---------- */
+#view-permit .hero h1 { font-size: clamp(42px, 10.5vw, 78px); }
+#view-permit .section, .day, .quiz { scroll-margin-top: 72px; }
+.sub { font-size: 21px; padding: 20px 8px 10px; }
+.card > .how { padding: 16px 0; }
+.chip.ok { background: var(--ok-soft); color: var(--ok); box-shadow: none; }
+.section > header .btn { margin-top: 12px; }
+
+/* today's card: a ring with the days left, and what to do next */
+.now { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 20px; padding: 20px; --r: 30px; }
+.now-body { min-width: 0; }
+.now h3 { font-size: 23px; margin: 4px 0 6px; }
+.now-next { color: var(--ink-2); font-size: 15px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.now .stats { margin: 12px 0 14px; }
+@media (max-width: 520px) { .now { grid-template-columns: 1fr; } }
+
+.ring { position: relative; width: 124px; aspect-ratio: 1; display: grid; place-content: center; text-align: center; }
+.ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 9; }
+.ring-track { stroke: var(--line); }
+.ring-fill {
+  stroke: var(--accent); stroke-linecap: round; stroke-dasharray: 100px;
+  stroke-dashoffset: calc(100px - var(--p, 0) * 100px);
+  transition: stroke-dashoffset .9s cubic-bezier(.2, .7, .2, 1);
+  animation: ring-in 1s cubic-bezier(.2, .7, .2, 1) backwards;
+}
+.ring.ok .ring-fill { stroke: var(--ok); }
+.ring b { font: italic 400 46px/1 var(--font-display); font-variation-settings: "SOFT" 100; }
+.ring span { font-size: 12px; font-weight: 600; color: var(--ink-3); }
+@keyframes ring-in { from { stroke-dashoffset: 100px; } }
+
+/* a day opens and closes; today's is open */
+.day { margin-bottom: 14px; --r: 30px; }
+.day.is-today { outline: 2px solid var(--accent); outline-offset: -2px; }
+.day-head { display: flex; align-items: center; gap: 14px; padding: 18px 20px; cursor: pointer; list-style: none; }
+.day-head::-webkit-details-marker { display: none; }
+.day-head::after {
+  content: ""; flex: none; width: 9px; height: 9px; margin: -4px 4px 0 0;
+  border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3);
+  transform: rotate(45deg); transition: transform .3s;
+}
+.day[open] > .day-head { padding-bottom: 6px; }
+.day[open] > .day-head::after { transform: rotate(225deg); margin-top: 4px; }
+.day-head .num { font: italic 400 44px/.9 var(--font-display); font-variation-settings: "SOFT" 100; color: var(--accent); min-width: 30px; }
+.day-head > div { flex: 1; min-width: 0; }
+.day-head h3 { font-size: 23px; margin-top: 4px; }
+.day > .tasks, .day > .know { margin: 0 20px; }
+.day[open] > .tasks, .day[open] > .know { animation: rise .45s cubic-bezier(.2, .7, .2, 1) both; }
+.day > :last-child { margin-bottom: 6px; }
+.tasks { list-style: none; margin: 0; padding: 0; }
+.task { padding: 13px 0; border-bottom: 1px solid var(--line); }
+.day > :last-child, .tasks:last-child .task:last-child { border-bottom: 0; }
+.task label { display: grid; grid-template-columns: auto 1fr; gap: 12px; cursor: pointer; font-weight: 500; }
+.task label span { transition: opacity .3s; }
+.task input:checked { animation: pop .35s; }
+.task input:checked + span { opacity: .5; text-decoration: line-through; }
+.task-do { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0 0 38px; }
+.know { border-bottom: 1px solid var(--line); }
+.know summary { padding: 13px 0; cursor: pointer; font-weight: 600; }
+.know summary span { margin-left: 6px; font-size: 13px; font-weight: 500; color: var(--ink-3); }
+.know .how { padding-bottom: 16px; }
+.know[open] .how { animation: rise .4s cubic-bezier(.2, .7, .2, 1) both; }
+.bring { padding: 4px 20px; }
+
+/* practice: readiness, one bar per topic, the quiz */
+.ready { padding: 16px 20px; margin-bottom: 12px; }
+.ready .k { font-weight: 700; font-size: 17px; }
+.ready .v { margin-top: 2px; color: var(--ink-2); }
+.ready .stats { margin-top: 12px; }
+.ready.is-ready { outline: 2px solid var(--ok); outline-offset: -2px; }
+.ready.is-ready .k { color: var(--ok); }
+.bar { display: block; height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; width: calc(var(--p, 0) * 100%); border-radius: inherit; background: var(--ok); transition: width .6s cubic-bezier(.2, .7, .2, 1); }
+.rows.sets li { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0 14px; }
+.rows.sets .k, .rows.sets .v { grid-column: 1; }
+.rows.sets .btn { grid-column: 2; grid-row: 1 / span 2; }
+.rows.sets .bar { grid-column: 1 / -1; margin-top: 10px; }
+
+.quiz { padding: 18px 20px 22px; margin-top: 14px; --r: 30px; }
+.quiz-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.quiz-head .btn { margin-left: auto; }
+.quiz-bar { margin-top: 14px; }
+.quiz-bar i { background: var(--accent); }
+.quiz-body { animation: slide .4s cubic-bezier(.2, .7, .2, 1) both; }
+.quiz-sign { display: grid; place-items: center; margin-top: 18px; }
+.quiz-sign .sign { width: 132px; animation: pop .5s; }
+.quiz-q { font-size: 24px; margin: 18px 0 14px; outline: 0; }
+.quiz-opts { display: grid; gap: 9px; }
+.opt {
+  display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px;
+  text-align: left; padding: 12px 14px; border: 0; border-radius: 18px;
+  background: var(--field); box-shadow: inset 0 0 0 1px var(--line); font-weight: 500;
+  transition: transform .15s, box-shadow .2s, background .2s;
+}
+.opt kbd { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--line); font: 700 13px var(--font-body); }
+.opt:enabled:hover { box-shadow: inset 0 0 0 2px var(--accent); transform: translateY(-1px); }
+.opt:enabled:active { transform: scale(.98); }
+.opt:disabled { cursor: default; }
+.opt:disabled:not(.right, .wrong) { opacity: .55; }
+.opt.right { background: var(--ok-soft); box-shadow: inset 0 0 0 2px var(--ok); animation: pop .4s; }
+.opt.wrong { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); animation: shake .4s; }
+/* a tick and a cross replace the letter, so colour is not the only sign */
+.opt.right kbd, .opt.wrong kbd { font-size: 0; color: var(--bg); }
+.opt.right kbd { background: var(--ok); }
+.opt.wrong kbd { background: var(--accent); }
+.opt.right kbd::before { content: "\2713"; font-size: 14px; }
+.opt.wrong kbd::before { content: "\2715"; font-size: 13px; }
+.quiz-after { display: grid; gap: 6px; justify-items: start; margin-top: 16px; animation: rise .35s both; }
+.quiz-after:empty { display: none; }
+.quiz-after .btn { margin-top: 8px; }
+.verdict { font-weight: 700; }
+.verdict.ok { color: var(--ok); }
+.verdict.no { color: var(--accent); }
+.quiz .src { font-size: 13px; color: var(--ink-3); }
+.quiz .how { margin-top: 8px; }
+.quiz .how .sign { width: 30px; vertical-align: middle; margin-right: 8px; }
+.quiz-end { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.result { display: grid; justify-items: center; text-align: center; }
+.result .ring { margin-top: 20px; }
+.result .how, .result .src { justify-self: stretch; text-align: left; }
+
+/* self-test: "Hide the answers" blurs them until a row or a sign is tapped */
+.pairs .v { transition: filter .35s, opacity .35s; }
+.cover .pairs li, .cover .sign-card { cursor: pointer; }
+.cover .pairs li:not(.seen) .v { filter: blur(7px); opacity: .5; user-select: none; }
+
+.sign { display: inline-block; width: 64px; line-height: 0; }
+.sign svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .28)); }
+.sign text { font-family: Arial, Helvetica, sans-serif; font-weight: 700; text-anchor: middle; }
+.rows.kinds li { display: grid; grid-template-columns: 52px 1fr; align-items: center; gap: 0 16px; }
+.rows.kinds .sign { width: 52px; grid-row: 1 / span 2; }
+.rows.kinds .k, .rows.kinds .v { grid-column: 2; }
+.sign-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.sign-card { display: flex; flex-direction: column; align-items: center; margin: 0; padding: 18px 14px 16px; border: 0; font: inherit; color: inherit; text-align: center; cursor: default; --r: 22px; transition: transform .25s; }
+.sign-card:hover { transform: translateY(-3px); }
+.sign-card .sign { width: 84px; transition: transform .3s cubic-bezier(.3, 1.35, .5, 1); }
+.sign-card:hover .sign { transform: scale(1.07) rotate(-2deg); }
+.sign-card b { display: block; margin-top: 12px; }
+.sign-card .cap > span { display: block; margin-top: 2px; font-size: 13px; color: var(--ink-2); }
+.sign-card .tap { display: none; margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--accent); }
+.cover .sign-card:not(.seen) .cap { display: none; }
+.cover .sign-card:not(.seen) .tap { display: block; }
+.cover .sign-card.seen { animation: flip .5s cubic-bezier(.2, .7, .2, 1); }
+
+/* each part fades in when it scrolls into view (the class is added by the script) */
+.fade { opacity: 0; transform: translateY(20px); transition: opacity .7s, transform .7s cubic-bezier(.2, .7, .2, 1); }
+.fade.in { opacity: 1; transform: none; }
+
+/* confetti: a day finished, a mock test passed */
+.burst { position: fixed; z-index: 60; pointer-events: none; }
+.burst i { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 2px; background: var(--accent); animation: burst 1s cubic-bezier(.1, .7, .3, 1) both; }
+.burst i:nth-child(3n) { background: var(--ok); }
+.burst i:nth-child(3n+1) { background: #f7c600; border-radius: 50%; }
+@keyframes burst {
+  from { transform: rotate(var(--a)) translateY(0); opacity: 1; }
+  to { transform: rotate(var(--a)) translateY(calc(var(--d) * -1)) scale(.4); opacity: 0; }
+}
+@keyframes pop { 50% { transform: scale(1.04); } }
+@keyframes shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+@keyframes slide { from { opacity: 0; transform: translateX(22px); } }
+@keyframes flip { from { transform: rotateY(90deg); } }
+@media (prefers-reduced-motion: reduce) { .burst { display: none; } }
+
+/* ---------- 11 motion ---------- */
 .reveal { animation: rise .7s cubic-bezier(.2, .7, .2, 1) both; animation-delay: calc(var(--n, 0) * 55ms); }
 @keyframes rise { from { opacity: 0; transform: translateY(16px); } }
 

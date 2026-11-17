@@ -27,7 +27,7 @@
   });
 
   /* ---------- 3 views ---------- */
-  const VIEWS = ['plan', 'watch', 'tracker'];
+  const VIEWS = ['plan', 'watch', 'tracker', 'permit'];
   const tabs = $('.tabs');
 
   function show(view, { scroll = true } = {}) {
@@ -391,9 +391,311 @@
     renderTracker();
   }
 
-  /* ---------- 7 start ---------- */
+  /* ---------- 7 permit: the study plan (js/permit-data.js, js/permit-questions.js) ---------- */
+  const PERMIT_KEY = 'permit-v1';
+  const shuffle = list => {
+    const a = [...list];
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  };
+  const RING = '<svg viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-track" cx="60" cy="60" r="52"/><circle class="ring-fill" cx="60" cy="60" r="52" pathLength="100"/></svg>';
+
+  /** A short burst of confetti from an element: a day finished, a mock test passed. */
+  function celebrate(el) {
+    const r = el.getBoundingClientRect(), burst = document.createElement('div');
+    burst.className = 'burst';
+    burst.style.left = r.left + r.width / 2 + 'px';
+    burst.style.top = r.top + r.height / 2 + 'px';
+    burst.innerHTML = Array.from({ length: 18 }, (_, i) => `<i style="--a:${i * 20}deg;--d:${60 + Math.random() * 70}px"></i>`).join('');
+    document.body.append(burst);
+    setTimeout(() => burst.remove(), 1100);
+  }
+
+  function renderPermit() {
+    const view = $('#view-permit'), P = PERMIT, QS = PERMIT_QUESTIONS, MOCK = P.mock, N = P.days.length;
+    const saved = store.get(PERMIT_KEY, {});
+    const setOf = v => new Set(Array.isArray(v) ? v : []);
+    // done: ticked tasks. right: questions answered correctly last time. missed: answered wrongly last time.
+    const done = setOf(saved.done), right = setOf(saved.right), missed = setOf(saved.missed);
+    const mocks = Array.isArray(saved.mocks) ? saved.mocks : [];   // the latest mock test scores
+    const save = () => store.set(PERMIT_KEY, { done: [...done], right: [...right], missed: [...missed], mocks });
+    const topic = id => P.topics.find(t => t.id === id);
+    const tasks = [...P.days.flatMap(d => d.tasks), ...P.bring];
+    const undone = list => list.filter(t => !done.has(t.id));
+
+    // The days count back from the test date: the last day is the test.
+    const [y, m, d] = P.testDate.split('-').map(Number);
+    const dayDate = i => new Date(y, m - 1, d - (N - 1 - i));
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const daysTo = date => Math.round((date - today) / DAY);
+    const fmtDay = date => date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    const todayIndex = P.days.findIndex((_, i) => daysTo(dayDate(i)) === 0);
+    const openDay = todayIndex >= 0 ? todayIndex : daysTo(dayDate(0)) > 0 ? 0 : N - 1;
+    const sign = id => `<span class="sign">${PERMIT_SIGNS[id].svg}</span>`;
+    const link = ([label, url]) => `<a class="btn small" href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>`;
+    const QUIZ_LABEL = { mock: 'Start mock test', missed: 'Missed questions' };
+
+    const taskHtml = t => `
+      <li class="task">
+        <label><input type="checkbox" data-task="${esc(t.id)}"${done.has(t.id) ? ' checked' : ''}><span>${esc(t.text)}</span></label>
+        <div class="task-do">
+          ${t.min ? `<span class="chip">${t.min} min</span>` : ''}
+          ${(t.links || []).map(link).join('')}
+          ${t.quiz ? `<button class="btn small" type="button" data-quiz="${esc(t.quiz)}">${QUIZ_LABEL[t.quiz] || 'Practice'}</button>` : ''}
+          ${t.jump ? `<button class="btn small" type="button" data-jump="${esc(t.jump[0])}">${esc(t.jump[1])}</button>` : ''}
+        </div>
+      </li>`;
+    const knowHtml = id => `
+      <details class="know">
+        <summary>Must know: ${esc(topic(id).title)} <span>${topic(id).know.length} points</span></summary>
+        <ul class="how">${topic(id).know.map(k => `<li>${esc(k)}</li>`).join('')}</ul>
+      </details>`;
+    const dayHtml = (day, i) => `
+      <details class="day glass" data-day="${i}"${i === openDay ? ' open' : ''}>
+        <summary class="day-head">
+          <span class="num">${i + 1}</span>
+          <div>
+            <p class="eyebrow">${esc(fmtDay(dayDate(i)))} · about ${day.tasks.reduce((n, t) => n + t.min, 0)} min</p>
+            <h3>${esc(day.title)}</h3>
+          </div>
+          <span class="chip day-state"></span>
+        </summary>
+        <ul class="tasks">${day.tasks.map(taskHtml).join('')}</ul>
+        ${day.topics.map(knowHtml).join('')}
+      </details>`;
+    const setRow = (id, title) => `
+      <li><span class="k">${esc(title)}</span><span class="v" data-set="${esc(id)}"></span>
+        <button class="btn small" type="button" data-quiz="${esc(id)}">Start</button>
+        ${topic(id) ? `<span class="bar" data-bar="${esc(id)}"><i></i></span>` : ''}</li>`;
+    const signCard = id => `
+      <button class="sign-card glass" type="button">${sign(id)}
+        <span class="cap"><b>${esc(PERMIT_SIGNS[id].name)}</b><span>${esc(PERMIT_SIGNS[id].means)}</span></span>
+        <span class="tap">Tap to check</span>
+      </button>`;
+    const cover = what => `<button class="btn small" type="button" data-cover data-on="Hide the ${what}" data-off="Show the ${what}" aria-pressed="false">Hide the ${what}</button>`;
+    const head = (id, title, lede, action = '') => `<section class="section" id="${id}"><header><h2>${title}</h2>${lede ? `<p class="lede">${lede}</p>` : ''}${action}</header>`;
+    const JUMP = [['p-days', 'The plan'], ['p-practice', 'Practice'], ['p-numbers', 'Numbers'], ['p-signs', 'Signs'], ['p-after', 'Test day'], ['p-test', 'The test']];
+
+    view.innerHTML = `
+      <div class="hero reveal">
+        <p class="eyebrow">${esc(P.state)} learner’s permit · Knowledge Test · ${esc(fmtDay(dayDate(N - 1)))}</p>
+        <h1>1 week study for <em>permit.</em></h1>
+        <div class="now glass">
+          <div class="ring" id="pRing" role="img">${RING}<b id="pLeftN"></b><span id="pLeftT"></span></div>
+          <div class="now-body">
+            <p class="eyebrow" id="pNowEyebrow"></p>
+            <h3 id="pNowTitle"></h3>
+            <p class="now-next" id="pNowText"></p>
+            <div class="stats"><span class="chip" id="pTasks"></span><span class="chip" id="pKnown"></span></div>
+            <button class="btn primary" type="button" id="pNowGo"></button>
+          </div>
+        </div>
+      </div>
+      <div class="jump reveal" style="--n:2">${JUMP.map(([id, label]) => `<button class="chip" type="button" data-jump="${id}">${label}</button>`).join('')}</div>
+
+      ${head('p-days', `The ${N} days`, 'Tick each task when it is done. It is saved on this device.')}
+        ${P.days.map(dayHtml).join('')}
+      </section>
+
+      ${head('p-practice', 'Practice', `${QS.length} questions written from the manual. A question is mastered when your last answer to it was right.`)}
+        <div class="card glass ready" id="pReady"></div>
+        <div class="card glass"><ul class="rows sets">
+          ${setRow('mock', 'Mock test')}${setRow('missed', 'Missed questions')}${P.topics.map(t => setRow(t.id, t.title)).join('')}
+        </ul></div>
+        <div class="quiz glass" id="pQuiz" hidden></div>
+      </section>
+
+      ${head('p-numbers', 'Numbers', 'The easy points. Hide the answers, say each one out loud, then tap the row to check.', cover('answers'))}
+        ${P.numbers.map(g => `<h3 class="sub">${esc(g.title)}</h3>${rowsHtml(g.rows, true)}`).join('')}
+      </section>
+
+      ${head('p-signs', 'Signs', 'First the colour and shape rules, then the signs. Hide the meanings, say what a sign means, then tap it to check.', cover('meanings'))}
+        <div class="card glass"><ul class="rows kinds">
+          ${P.signKinds.map(([k, v, id]) => `<li>${sign(id)}<span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></li>`).join('')}
+        </ul></div>
+        ${P.signGroups.map(g => `<h3 class="sub">${esc(g.title)}</h3><div class="sign-grid">${g.ids.map(signCard).join('')}</div>`).join('')}
+      </section>
+
+      ${head('p-after', 'Test day', 'What goes in the folder, and what happens at the Driver License Center.')}
+        <h3 class="sub">In the folder</h3>
+        <div class="card glass bring"><ul class="tasks">${P.bring.map(taskHtml).join('')}</ul></div>
+        <h3 class="sub">On the day, and after</h3>
+        ${rowsHtml(P.after, true)}
+      </section>
+
+      ${head('p-test', 'The test', 'What you are studying for.')}
+        ${rowsHtml(P.facts, true)}
+        <h3 class="sub">How to use this week</h3>
+        <div class="card glass"><ul class="how">${P.method.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>
+        <p class="sources">Checked against PennDOT on Nov 16, 2026: ${P.sources.map(s => `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>`).join(' · ')}. Rules and fees change, so check PennDOT before you go.</p>
+      </section>`;
+
+    // Each part fades in as it scrolls into view.
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(entries => entries.forEach(en => {
+        if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+      }), { rootMargin: '0px 0px -8% 0px' });
+      $$('.section', view).forEach(el => { el.classList.add('fade'); io.observe(el); });
+    }
+
+    /** Fills in everything that changes: the countdown, the progress, today's card and each day's state. */
+    function counts() {
+      const left = daysTo(dayDate(N - 1)), nDone = tasks.length - undone(tasks).length;
+      const nRight = QS.filter(q => right.has(q.id)).length, nMissed = QS.filter(q => missed.has(q.id)).length;
+      // the ring: days left in the middle, the share of tasks done around it
+      $('#pRing').style.setProperty('--p', nDone / tasks.length);
+      $('#pRing').setAttribute('aria-label', `${Math.max(left, 0)} days to the test, ${nDone} of ${tasks.length} tasks done`);
+      $('#pLeftN').textContent = left > 0 ? left : left === 0 ? 'Go' : '–';
+      $('#pLeftT').textContent = left > 1 ? 'days left' : left === 1 ? 'day left' : left === 0 ? 'test day' : 'date passed';
+      $('#pTasks').textContent = `${nDone} of ${tasks.length} tasks done`;
+      $('#pKnown').textContent = `${nRight} of ${QS.length} questions mastered`;
+
+      // today's card: an earlier day with tasks left comes first
+      const late = P.days.findIndex((day, i) => daysTo(dayDate(i)) < 0 && undone(day.tasks).length);
+      const at = late >= 0 ? late : openDay, todo = undone(P.days[at].tasks);
+      $('#pNowEyebrow').textContent = left < 0 ? 'The test date has passed' : late >= 0 ? 'Catch up first' : todayIndex < 0 ? `Starts ${fmtDay(dayDate(0))}` : `Today · ${fmtDay(today)}`;
+      $('#pNowTitle').textContent = `Day ${at + 1}: ${P.days[at].title}`;
+      $('#pNowText').textContent = todo.length ? `Next: ${todo[0].text}` : at === N - 1 ? 'Everything is ticked. Go and pass.' : 'Everything for today is done. Come back tomorrow.';
+      $('#pNowGo').textContent = todo.length ? `Continue · about ${todo.reduce((n, t) => n + t.min, 0)} min left` : 'Open the day';
+      $('#pNowGo').dataset.goday = at;
+
+      const last2 = mocks.slice(-2), ready = last2.length === 2 && last2.every(s => s >= MOCK.aim);
+      $('#pReady').innerHTML = `
+        <p class="k">${ready ? 'You are ready.' : 'Are you ready?'}</p>
+        <p class="v">${ready ? `Your last two mock tests were ${MOCK.aim} of ${MOCK.size} or better.` : `You are ready when two mock tests in a row are ${MOCK.aim} of ${MOCK.size} or better. The real test needs ${MOCK.pass}.`}</p>
+        ${mocks.length ? `<div class="stats">${mocks.map(s => `<span class="chip ${s >= MOCK.pass ? 'ok' : 'accent'}">${s}/${MOCK.size}</span>`).join('')}</div>` : ''}`;
+      $('#pReady').classList.toggle('is-ready', ready);
+
+      $$('[data-set]', view).forEach(el => {
+        const id = el.dataset.set, qs = QS.filter(q => q.t === id);
+        el.textContent = id === 'mock' ? `${MOCK.size} questions like the real test. ${MOCK.pass} to pass.`
+          : id === 'missed' ? (nMissed ? `${nMissed} to redo` : 'Nothing to redo right now.')
+          : `${qs.filter(q => right.has(q.id)).length} of ${qs.length} mastered`;
+      });
+      $$('[data-bar]', view).forEach(el => {
+        const qs = QS.filter(q => q.t === el.dataset.bar);
+        el.style.setProperty('--p', qs.filter(q => right.has(q.id)).length / qs.length);
+      });
+      $$('.day', view).forEach(el => {
+        const i = +el.dataset.day, n = P.days[i].tasks.length, k = n - undone(P.days[i].tasks).length, diff = daysTo(dayDate(i));
+        const chip = $('.day-state', el);
+        chip.textContent = k === n ? 'Done' : `${diff === 0 ? 'Today · ' : diff < 0 ? 'Catch up · ' : ''}${k}/${n}`;
+        chip.classList.toggle('accent', k < n && diff <= 0);
+        chip.classList.toggle('ok', k === n);
+        el.classList.toggle('is-today', diff === 0);
+      });
+    }
+    counts();
+
+    /* The quiz: one question at a time, with the reason after each answer. */
+    const box = $('#pQuiz');
+    let quiz = null;
+    const quizHead = extra => `<div class="quiz-head"><span class="chip accent">${esc(quiz.title)}</span>${extra}<button class="btn small" type="button" data-quit>Close</button></div>`;
+
+    function startQuiz(set) {
+      let list, title = 'Mock test';
+      if (set === 'mock') {   // the size of the real test, with a few sign questions in it
+        list = shuffle([...shuffle(QS.filter(q => q.t === 'signs')).slice(0, MOCK.signs), ...shuffle(QS.filter(q => q.t !== 'signs')).slice(0, MOCK.size - MOCK.signs)]);
+      } else if (set === 'missed') {
+        title = 'Missed questions';
+        list = shuffle(QS.filter(q => missed.has(q.id))).slice(0, 15);
+      } else {
+        const ids = set.split(','), all = shuffle(QS.filter(q => ids.includes(q.t)));
+        title = ids.map(id => topic(id).short).join(' + ');
+        list = [...all.filter(q => !right.has(q.id)), ...all.filter(q => right.has(q.id))].slice(0, 15);   // not yet mastered first
+      }
+      quiz = { set, title, list, i: 0, score: 0, wrong: [], from: quiz ? quiz.from : window.scrollY };
+      box.hidden = false;
+      if (list.length) ask();
+      else box.innerHTML = quizHead('') + '<h3 class="quiz-q">Nothing to redo right now.</h3><p>Questions you get wrong are collected here until you get them right.</p>';
+      box.scrollIntoView({ block: 'start' });
+    }
+
+    function ask() {
+      const q = quiz.list[quiz.i];
+      quiz.opts = shuffle(q.a);
+      box.innerHTML = `
+        ${quizHead(`<span class="chip">Question ${quiz.i + 1} of ${quiz.list.length}</span>`)}
+        <div class="bar quiz-bar" style="--p:${quiz.i / quiz.list.length}"><i></i></div>
+        <div class="quiz-body">
+          ${q.sign ? `<div class="quiz-sign">${sign(q.sign)}</div>` : ''}
+          <h3 class="quiz-q" tabindex="-1">${esc(q.q)}</h3>
+          <div class="quiz-opts">${quiz.opts.map((a, i) => `<button class="opt" type="button" data-i="${i}"><kbd>${'ABCD'[i]}</kbd><span>${esc(a)}</span></button>`).join('')}</div>
+          <div class="quiz-after" role="status"></div>
+        </div>`;
+    }
+
+    function answer(btn) {
+      const q = quiz.list[quiz.i], is = b => quiz.opts[b.dataset.i] === q.a[0], ok = is(btn);
+      $$('.opt', box).forEach(b => { b.disabled = true; b.classList.toggle('right', is(b)); });
+      btn.classList.toggle('wrong', !ok);
+      if (ok) { quiz.score++; right.add(q.id); missed.delete(q.id); }
+      else { right.delete(q.id); missed.add(q.id); quiz.wrong.push(q); }
+      save(); counts();
+      $('.quiz-bar', box).style.setProperty('--p', (quiz.i + 1) / quiz.list.length);
+      $('.quiz-after', box).innerHTML = `
+        <p class="verdict ${ok ? 'ok' : 'no'}">${ok ? 'Correct.' : 'Not this one.'}</p>
+        <p>${esc(q.why)}</p>
+        <p class="src">${esc(topic(q.t).title)}</p>
+        <button class="btn primary" type="button" data-next>${quiz.i === quiz.list.length - 1 ? 'See the result' : 'Next question'}</button>`;
+      $('[data-next]', box).focus();
+    }
+
+    function finish() {
+      const mock = quiz.set === 'mock', n = quiz.list.length, pass = quiz.score >= MOCK.pass, clean = !quiz.wrong.length;
+      if (mock) { mocks.push(quiz.score); mocks.splice(0, mocks.length - 8); save(); counts(); }
+      box.innerHTML = `
+        ${quizHead('')}
+        <div class="quiz-body result">
+          <div class="ring ${mock && !pass ? 'no' : 'ok'}" style="--p:${quiz.score / n}">${RING}<b>${quiz.score}</b><span>of ${n}</span></div>
+          <h3 class="quiz-q" tabindex="-1">${mock ? (pass ? 'That would pass.' : 'That would not pass yet.') : clean ? 'All correct.' : 'Keep going.'}</h3>
+          ${mock ? `<p>The real test needs ${MOCK.pass} of ${MOCK.size}. Aim for ${MOCK.aim} here.</p>` : ''}
+          ${clean ? '' : `<p class="src">To learn again:</p><ul class="how">${quiz.wrong.map(q => `<li>${q.sign ? sign(q.sign) : ''}<b>${esc(q.q)}</b> ${esc(q.a[0])}.</li>`).join('')}</ul>`}
+          <div class="quiz-end">
+            <button class="btn primary" type="button" data-quiz="${esc(quiz.set)}">${mock ? 'Another mock test' : 'Go again'}</button>
+            <button class="btn" type="button" data-quit>Close</button>
+          </div>
+        </div>`;
+      if (mock ? pass : clean) celebrate($('.ring', box));
+    }
+
+    view.addEventListener('click', e => {
+      const hit = sel => e.target.closest(sel);
+      let el;
+      if ((el = hit('[data-quiz]'))) startQuiz(el.dataset.quiz);
+      else if ((el = hit('[data-jump]'))) document.getElementById(el.dataset.jump)?.scrollIntoView({ block: 'start' });
+      else if ((el = hit('[data-goday]'))) { const day = $(`.day[data-day="${el.dataset.goday}"]`, view); day.open = true; day.scrollIntoView({ block: 'start' }); }
+      else if ((el = hit('.opt'))) answer(el);
+      else if (hit('[data-next]')) { if (++quiz.i < quiz.list.length) ask(); else finish(); $('.quiz-q', box).focus(); }
+      else if (hit('[data-quit]')) { box.hidden = true; window.scrollTo(0, quiz.from); quiz = null; }   // back to where the quiz was started
+      else if ((el = hit('[data-cover]'))) {   // self-test: hide the answers, tap one to see it
+        const sec = el.closest('.section'), on = sec.classList.toggle('cover');
+        el.textContent = on ? el.dataset.off : el.dataset.on;
+        el.setAttribute('aria-pressed', on);
+        $$('.seen', sec).forEach(x => x.classList.remove('seen'));
+      }
+      else if ((el = hit('.cover .pairs li, .cover .sign-card'))) el.classList.add('seen');
+    });
+    view.addEventListener('change', e => {
+      const t = e.target.closest('[data-task]');
+      if (!t) return;
+      if (t.checked) done.add(t.dataset.task); else done.delete(t.dataset.task);
+      save(); counts();
+      const group = t.closest('.day, .bring');   // the last tick of a day or of the folder list
+      if (t.checked && !$('[data-task]:not(:checked)', group)) celebrate(t);
+    });
+    // A to D (or 1 to 4) answer the question on a keyboard.
+    document.addEventListener('keydown', e => {
+      if (!quiz || view.hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+      const i = Math.max('abcd'.indexOf(e.key.toLowerCase()), '1234'.indexOf(e.key));
+      if (i >= 0) $(`.opt[data-i="${i}"]:enabled`, box)?.click();
+    });
+  }
+
+  /* ---------- 8 start ---------- */
   renderPlan();
   renderWatch();
   initTracker();
+  renderPermit();
   show(location.hash.slice(1), { scroll: false });
 })();
